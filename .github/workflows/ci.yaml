@@ -1,1 +1,26 @@
-s
+name : CI 
+
+on : 
+    push : 
+        branches : [main] 
+    
+jobs : 
+    build : 
+        name : Compile Julia -> .so
+        runs-on: ubuntu-latest
+        container : 
+            image : centos:7
+
+
+        steps :
+            - uses : actions/checkout@v4
+
+            - name : Install system deps 
+              run : |
+                yum install -y curl tar gzip
+
+
+            - name : install Julia 
+              run : | 
+                curl -fsSL https://install.julialang.org | sh -s -- --yes
+                echo "$HOME/.juliaup/bin" >> $GITHUB_PATH
