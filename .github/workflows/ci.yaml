@@ -4,23 +4,27 @@ on :
     push : 
         branches : [main] 
     
-jobs : 
-    build : 
-        name : Compile Julia -> .so
-        runs-on: ubuntu-latest
-        container : 
-            image : centos:7
+jobs:
+  build:
+    runs-on: ubuntu-latest  # no container: here
 
+    steps:
+      - uses: actions/checkout@v4  # runs on ubuntu, no glibc issue
 
-        steps :
-            - uses : actions/checkout@v4
+      - name: Compile inside CentOS 7
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            centos:7 bash -c "
+              yum install -y curl tar gzip &&
+              curl -fsSL https://install.julialang.org | sh -s -- --yes &&
+              export PATH=$HOME/.juliaup/bin:$PATH &&
+              julia --project=. -e 'using Pkg; Pkg.instantiate()' &&
+              julia --project=. compile.jl
+            "
 
-            - name : Install system deps 
-              run : |
-                yum install -y curl tar gzip
-
-
-            - name : install Julia 
-              run : | 
-                curl -fsSL https://install.julialang.org | sh -s -- --yes
-                echo "$HOME/.juliaup/bin" >> $GITHUB_PATH
+      - uses: actions/upload-artifact@v4
+        with:
+          name: compiled-lib
+          path: lib/*.so
