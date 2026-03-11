@@ -17,8 +17,6 @@ jobs:
             -v ${{ github.workspace }}:/workspace \
             -w /workspace \
             centos:7 bash -c "
-              sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-Base.repo &&
-              sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|
               yum install -y curl tar gzip &&
               curl -fsSL https://install.julialang.org | sh -s -- --yes &&
               export PATH=$HOME/.juliaup/bin:$PATH &&
