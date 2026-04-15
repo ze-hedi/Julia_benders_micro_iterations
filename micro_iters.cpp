@@ -1,0 +1,286 @@
+#include "micro_iters.h"
+
+#include <chrono>
+#include <filesystem>
+#include <fstream>
+#include <iostream>
+
+#include <boost/mpi.hpp>
+#include <boost/tokenizer.hpp>
+
+namespace mpi = boost::mpi;
+
+std::map<std::string,std::vector<std::string>> read_constraints_dict(std::filesystem::path& input_root)
+{
+
+    std::map<std::string,std::vector<std::string>> result ; 
+    std::filesystem::path constraints_csv_path = input_root / "constraints_dictionary.csv";
+    std::ifstream constraints_csv_stream(constraints_csv_path.c_str());
+
+    if (constraints_csv_stream.is_open())
+    {
+        std::string line;
+        typedef boost::tokenizer<boost::escaped_list_separator<char>> Tokenizer;
+
+        while (std::getline(constraints_csv_stream, line))
+        {
+            Tokenizer tok(line);
+            std::vector<std::string> tokens(tok.begin(), tok.end());
+            std::string key = tokens[0];
+            std::vector<std::string> values;
+            if (tokens.size() > 1)
+            {
+                values.assign(tokens.begin() + 1, tokens.end());
+            }
+
+            result[key] = values;
+        }
+    }
+    else
+    {
+        std::cerr << "unable to open : " << constraints_csv_path.c_str() << std::endl;
+        exit(EXIT_FAILURE);
+    }
+    return result ; 
+  }
+
+std::map<std::string,std::vector<std::string>>  get_constraints_dict(std::filesystem::path& input_root)
+{
+  static auto constraints_dict = read_constraints_dict(input_root); 
+  return constraints_dict ; 
+}
+
+
+std::map<std::string, std::string> read_variables_dictionary(
+  const std::filesystem::path& input_root)
+{
+    std::filesystem::path variables_dictionary_path = input_root / "variables_dictionary.csv";
+    std::ifstream variables_dict(variables_dictionary_path.c_str());
+    std::map<std::string, std::string> variables_to_follow;
+    if (variables_dict.is_open())
+    {
+        std::string row;
+        typedef boost::tokenizer<boost::escaped_list_separator<char>> Tokenizer;
+        while (std::getline(variables_dict, row))
+        {
+            Tokenizer tok(row);
+            std::vector<std::string> tokens(tok.begin(), tok.end());
+            variables_to_follow[tokens[1]] = tokens[0];
+        }
+    }
+    else
+    {
+        std::cerr << "unable to open : " << variables_dictionary_path.c_str() << std::endl;
+        exit(EXIT_FAILURE);
+    }
+    return variables_to_follow;
+}
+
+const std::map<std::string, std::string>& get_variables_dictionary(
+  const std::filesystem::path& input_root = ".")
+{
+
+    static auto variables_to_follow_dict = read_variables_dictionary(input_root);
+    return variables_to_follow_dict;
+}
+
+
+std::map<std::string, std::vector<std::string>>& get_added_constraints_families_per_sub() 
+{
+  static std::map<std::string, std::vector<std::string>> added_constraints_families_per_sub ; 
+  return added_constraints_families_per_sub ; 
+}
+
+bool check_if_constraints_family_added(std::string sub_name,const char* violated_constraints_family) 
+{
+  auto& added_constraints_families_per_sub = get_added_constraints_families_per_sub() ; 
+  auto constraint_family_iter = std::find(added_constraints_families_per_sub[sub_name].begin(), added_constraints_families_per_sub[sub_name].end(),violated_constraints_family); 
+  if (constraint_family_iter != added_constraints_families_per_sub[sub_name].end())
+    return true ; 
+  else 
+    return false ; 
+}
+
+extern "C"
+{
+void OnBendersStart(SubProblemsIds sub_problem_ids, int rank,std::filesystem::path& input_root)
+{
+    init_julia(0, NULL);
+    static std::map<std::string, std::vector<std::string>> added_constraints_families_per_sub ; 
+    jl_load_variables(sub_problem_ids, rank);
+
+    auto variables_to_follow_dict = get_variables_dictionary(input_root);
+    auto constraints_dict = get_constraints_dict(input_root) ; 
+
+
+}
+
+void OnBendersIterationStart()
+{
+}
+
+void OnBendersIterationEnd()
+{
+    jl_call_GC();
+}
+
+void OnBendersEnd()
+{
+    shutdown_julia(0);
+}
+
+void OnBendersMicroIterationStart()
+{
+}
+
+void OnBendersMicroIterationEnd(std::string sub_name,
+                                bool& added_rows,
+                                std::string solving_time,
+                                std::vector<double> sub_solution,
+                                std::vector<int>& variables_indices_vector, 
+                                std::vector<std::string>& variables_names_vector,
+                                std::filesystem::path input_root, 
+                                std::vector<std::string>& constraints_to_add_vec)
+{
+
+    auto constraints_dict = get_constraints_dict(input_root)  ; 
+    std::vector<FlowN> flows_to_follow;
+    flows_to_follow.reserve(variables_indices_vector.size());
+    auto  variables_dict = get_variables_dictionary(input_root) ; 
+ 
+    for (int i=0; i<variables_indices_vector.size(); i++) 
+    {
+      auto value = sub_solution[variables_indices_vector[i]] ; 
+      FlowN flow;
+      flow.flow_id = variables_dict[variables_names_vector[i]].c_str();
+      flow.value = value;
+
+      flows_to_follow.push_back(flow) ; 
+    }
+
+    FlowNList N_flows;
+    N_flows.flows = flows_to_follow.data();
+    N_flows.size = flows_to_follow.size(); 
+
+    ViolatedFlowConstraints constraints_to_add = jl_return_constraints_for_micro_iteration(
+                                                sub_name.c_str(),
+                                                N_flows);
+
+    added_rows = constraints_to_add.size ; 
+    auto& added_constraints_families_per_sub = get_added_constraints_families_per_sub() ; 
+    for (int i=0; i<constraints_to_add.size; i++) 
+    {
+      if (!check_if_constraints_family_added(sub_name,constraints_to_add.constraints[i]))
+      {
+        added_constraints_families_per_sub[sub_name].push_back(constraints_to_add.constraints[i]) ;
+        std::cout<<"!!!! size of constraints vector to add "<<constraints_dict[constraints_to_add.constraints[i]].size()<<std::endl ; 
+        constraints_to_add_vec.insert(constraints_to_add_vec.end(), constraints_dict[constraints_to_add.constraints[i]].begin(), constraints_dict[constraints_to_add.constraints[i]].end()) ; 
+        std::cout<<"####### constraints_to_add_vec "<<constraints_to_add_vec.size()<<std::endl; 
+      } 
+      else 
+      {
+        std::cout<<"contraint is already added "<<std::endl ; 
+      }
+    }
+
+}
+
+void OnBendersMasterResolutionStart(
+  std::map<std::string, double>& master_out,
+  int& num_iter,
+  mpi::communicator* world,
+  std::map<std::string, std::vector<std::string>>& added_constraintes_per_sub,
+  std::map<std::string, std::string>& binary_variables_ids_map)
+
+{
+
+    for (auto& [sub, _]: added_constraintes_per_sub)
+    {
+        added_constraintes_per_sub[sub] = std::vector<std::string>();
+    }
+
+    std::vector<CandidateLineInvestmentStatus> candidates_iter_res;
+    candidates_iter_res.reserve(master_out.size());
+    for (auto& [line, value]: master_out)
+    {
+        auto id_in_csv = binary_variables_ids_map[line].c_str();
+        candidates_iter_res.push_back(CandidateLineInvestmentStatus{id_in_csv, value});
+    }
+
+    CandidateLineInvestmentStatusList master_benders_input = CandidateLineInvestmentStatusList{
+      candidates_iter_res.data(),
+      master_out.size()};
+
+
+
+    auto t1 = std::chrono::high_resolution_clock::now();
+    // SerializedFactors_mpi serialized_factors_mpi ;
+    std::vector<uint8_t> HVDC_dict_serialized_buff;
+    std::vector<uint8_t> dict_incident_factors_serialized_buff;
+    std::vector<uint8_t> all_monitored_branches_serialized_buff;
+    SerializedBuffers serialized_buffs;
+
+    if (world->rank() == 0)
+    {
+        SerializedFactors serialized_factors = jl_compute_factors_for_microiterations(
+          master_benders_input,
+          num_iter);
+        
+        auto n_bytes_hvdc = serialized_factors.HVDC_dict_serialized.bytes_length ; 
+        serialized_buffs.HVDC_dict_serialized_buff.resize(
+          serialized_factors.HVDC_dict_serialized.bytes_length);
+        std::memcpy(serialized_buffs.HVDC_dict_serialized_buff.data(),
+                    serialized_factors.HVDC_dict_serialized.bytes_ptr,
+                    serialized_factors.HVDC_dict_serialized.bytes_length * sizeof(uint8_t));
+
+        serialized_buffs.dict_incident_factors_serialized_buff.resize(
+          serialized_factors.dict_incident_factors_serialized.bytes_length);
+        std::memcpy(serialized_buffs.dict_incident_factors_serialized_buff.data(),
+                    serialized_factors.dict_incident_factors_serialized.bytes_ptr,
+                    serialized_factors.dict_incident_factors_serialized.bytes_length
+                      * sizeof(uint8_t));
+
+        serialized_buffs.all_monitored_branches_serialized_buff.resize(
+          serialized_factors.all_monitored_branches_serialized.bytes_length);
+        std::memcpy(serialized_buffs.all_monitored_branches_serialized_buff.data(),
+                    serialized_factors.all_monitored_branches_serialized.bytes_ptr,
+                    serialized_factors.all_monitored_branches_serialized.bytes_length
+                      * sizeof(uint8_t));
+        jl_clean_buffers();
+    }
+
+    mpi::broadcast(*world, serialized_buffs, 0);
+
+    if (world->rank() != 0)
+    {
+        SerializedFactors serialized_factors{
+          SerializedObject{serialized_buffs.HVDC_dict_serialized_buff.data(),
+                           serialized_buffs.HVDC_dict_serialized_buff.size()},
+          SerializedObject{serialized_buffs.dict_incident_factors_serialized_buff.data(),
+                           serialized_buffs.dict_incident_factors_serialized_buff.size()},
+          SerializedObject{serialized_buffs.all_monitored_branches_serialized_buff.data(),
+                           serialized_buffs.all_monitored_branches_serialized_buff.size()},
+        };
+        jl_deserialize_factors(serialized_factors);
+    }
+
+    auto t2 = std::chrono::high_resolution_clock::now();
+    auto elapsed_microseconds = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1)
+                                  .count();
+}
+
+void OnBendersMasterResolutionEnd()
+{
+    // Can be used for cleanup or post-processing after master resolution
+}
+
+void OnBendersSubResolutionStart()
+{
+    // Can be used to prepare before subproblem resolution starts
+}
+
+void OnBendersSubResolutionEnd(std::string sub_name, int num_micro_iter)
+{
+    // Can be used for logging or statistics after subproblem resolution
+}
+}

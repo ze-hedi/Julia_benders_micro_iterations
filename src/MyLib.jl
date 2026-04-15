@@ -8,13 +8,13 @@ module MyLib
     using LinearAlgebra
     
     
-    struct CandidateLineMasterIterationResult
+    struct CandidateLineInvestmentStatus
         candidate_line_id::Cstring
         is_invested::Cint
     end
 
-    struct MasterBendersInput 
-        candidates_res::Ptr{CandidateLineMasterIterationResult}
+    struct CandidateLineInvestmentStatusList 
+        candidates_res::Ptr{CandidateLineInvestmentStatus}
         size::Cint
     end
 
@@ -33,7 +33,7 @@ module MyLib
         size::Cint
     end
 
-    struct ConstraintsToAdd 
+    struct ViolatedFlowConstraints 
         constraints::Ptr{Cstring} 
         size::Cint
     end
@@ -50,7 +50,8 @@ module MyLib
     end 
 
     
-    function build_dict_from_master_iter_result(input::MasterBendersInput) 
+    function build_dict_from_master_iter_result(input::CandidateLineInvestmentStatusList) 
+        
         dict = Dict{String, Int}()
         sizehint!(dict, input.size)
     
@@ -62,6 +63,7 @@ module MyLib
             line_id = unsafe_string(candidate.candidate_line_id)
             dict[line_id] = candidate.is_invested
         end
+        
         return dict
         
     end 
@@ -86,19 +88,22 @@ module MyLib
         bytes_deserialize = unsafe_wrap(Array,bytes_ptr,bytes_len,own=false) 
         buf_deserialize = IOBuffer(bytes_deserialize)
         deserialized_obj = deserialize(buf_deserialize)
+        
         return deserialized_obj 
     end 
+
+
+    
 
 
 
     Base.@ccallable function jl_load_variables(subproblems_ids::SubProblemsIds,rank::Cint)::Cvoid
 
-        # println("proc rank : $(rank)")
+
         path_input_julia = "./inputs_julia"
         global vars_dict = Dict{String, Any}() 
         
 
-        println("rank : $(rank)")
         dict_subproblems = Dict{String,Vector{String}}() 
         sizehint!(dict_subproblems,subproblems_ids.n_subproblems)
 
@@ -119,19 +124,24 @@ module MyLib
        
             Yl = deserialize("$(path_input_julia)/Yl.jls")
             vars_dict["Yl"] = Yl 
-       
+
+            
             A_hvdc = deserialize("$(path_input_julia)/A_hvdc.jls")
             vars_dict["A_hvdc"] = A_hvdc
+
 
             branches_to_candidates_dict = deserialize("$(path_input_julia)/branches_to_candidates_dict.jls")
             vars_dict["branches_to_candidates_dict"]  = branches_to_candidates_dict
 
+
             n_side1_dict = deserialize("$(path_input_julia)/n_side1_dict.jls")
-            vars_dict["n_side1_dict"] = n_side1_dict
-    
+            vars_dict["n_side1_dict"] = n_side1_dict    
+
+
             n_side2_dict = deserialize("$(path_input_julia)/n_side2_dict.jls")
             vars_dict["n_side2_dict"] = n_side2_dict
-    
+
+            
         end 
 
         
@@ -165,8 +175,10 @@ module MyLib
 ####################################################################################################################################
 
     function csv_to_Dict(path)
+        
         df = CSV.read(path, DataFrame, header = false,stringtype=String)
         @assert ncol(df) ≥ 2 "Le CSV doit contenir au moins deux colonnes"
+        
         return Dict(df[!, 1] .=> df[!, 2])
     end
     
@@ -181,6 +193,7 @@ module MyLib
 
 
     function update_HVDC_sensi_after_lines_removal(PTDF_new)
+        
         HVDC_sensitivity_matrix_new = PTDF_new * vars_dict["A_hvdc"] 
 
         return HVDC_sensitivity_matrix_new
@@ -211,7 +224,7 @@ module MyLib
         # Construire A_k = [√b_l * a_l_sans_slack]
         A_k = zeros(n, k)
         for (j, br) in enumerate(branches_not_invested)
-            # vecteur d’incidence complet
+            # vecteur d'incidence complet
             a = vars_dict["Ab"][br, :] |> collect
             # suppression du slack
             y_l = vars_dict["Yl"][br, br]
@@ -232,7 +245,6 @@ module MyLib
 
         # Nouvelle PTDF
         PTDF_new = Yl_new * Ab_new * Bnew_inv
-
 
         return PTDF_new
     end
@@ -322,15 +334,18 @@ module MyLib
             for (k, v) in dict_incident_factors
         )
 
-
+        
         #Do not return anything (in place modification)
         return dict_incident_factors
 
     end
 
-    Base.@ccallable function jl_compute_factors_for_microiterations(candidates::MasterBendersInput,num_iter::Cint)::SerializedFactors 
 
-        println("jl_compute_factors_for_microiterations start !!")
+    Base.@ccallable function jl_call_GC()::Cvoid
+        GC.gc(true)
+    end 
+
+    Base.@ccallable function jl_compute_factors_for_microiterations(candidates::CandidateLineInvestmentStatusList,num_iter::Cint)::SerializedFactors 
 
         t1 = time_ns()
         z_dict = build_dict_from_master_iter_result(candidates)
@@ -358,7 +373,6 @@ module MyLib
 
         elapsed_microseconds = (t2 - t1) / 1000 
 
-        
         vars_dict["HVDC_new_dict"] = HVDC_new_dict 
         HVDC_new_dict_serialized_ptr, HVDC_new_dict_bytes_len  = serialize_obj(HVDC_new_dict) 
         HVDC_new_dict_serialized_serialized_obj = SerializedObject(HVDC_new_dict_serialized_ptr,HVDC_new_dict_bytes_len)    
@@ -374,8 +388,6 @@ module MyLib
         new_msg = "elapsed time to compute factors for microiterations $(elapsed_microseconds)"   
         
         vars_dict["serialized_factors"] = SerializedFactors(HVDC_new_dict_serialized_serialized_obj,dict_incident_factors_serialized_obj, all_monitored_branches_serialized_obj)
-        
-        # GC.gc(true)
 
         return vars_dict["serialized_factors"]
     end 
@@ -383,10 +395,6 @@ module MyLib
 
 
     Base.@ccallable function jl_clean_buffers()::Cvoid 
-        if !isnothing(vars_dict["serialized_factors"])
-            println("vars_dict['serialized_factors'] is not nothing  " )
-        end 
-
         vars_dict["serialized_factors"] = nothing 
         
         return nothing 
@@ -404,7 +412,6 @@ module MyLib
     ####################################################################################################################################
     function get_overflows_N(v,F_N_values,N_constraints_added)
 
-
         #Initialize overflows dictionnaries
         dict_results_overflow_N = Dict{String, Float64}() #Branche monitorée
 
@@ -416,13 +423,11 @@ module MyLib
                 dict_results_overflow_N[monitored] = overflow
             end
         end
-
         return dict_results_overflow_N
     end
 
 
     function get_overflows_N_K( v, F_N_values)
-
 
         #Initialize overflows dictionnaries
         dict_results_overflow_N_K= Dict{Tuple{String, String}, Float64}() # (branche monitorée,incident)
@@ -449,12 +454,13 @@ module MyLib
         end
 
         results_overflow_N_K = sort(collect(dict_results_overflow_N_K), by=x->x[2], rev=true)
+        
         return results_overflow_N_K
     end
 
     
     function sort_results_and_return_constraints(dict_results_overflow_N,results_overflow_N_K) 
-
+        
         constraints_to_add = [] # Vector which will be sent to C++
         N_constraints_micro_it = [] # Vector used to track N_constraints added during this micro-iteration
         N_K_constraints_micro_it = [] # Vector used to track N_K_constraints added during this micro-iteration
@@ -474,13 +480,10 @@ module MyLib
                 append!(N_K_constraints_micro_it,[monitored])
             end
         end
-
-        
         return constraints_to_add, N_constraints_micro_it,N_K_constraints_micro_it
     end
 
     Base.@ccallable function jl_deserialize_factors(serialized_factors::SerializedFactors)::Cvoid 
-        
 
         vars_dict["HVDC_new_dict"] = deserialize_obj(serialized_factors.HVDC_dict_serialized.bytes_ptr,serialized_factors.HVDC_dict_serialized.bytes_length)
         
@@ -490,15 +493,11 @@ module MyLib
     
         vars_dict["all_monitored_branches"] = deserialize_obj(serialized_factors.all_monitored_branches_serialized.bytes_ptr, serialized_factors.all_monitored_branches_serialized.bytes_length)        
 
-    
         return nothing 
     end
     
-    Base.@ccallable function jl_return_constraints_for_micro_iteration(subproblem_id::Ptr{UInt8},flow_list::FlowNList,serialized_factors::SerializedFactors)::ConstraintsToAdd
-        
-
-        # if (serialized_factors.HVDC_dict_serialized.bytes_ptr != C_NULL)
-        
+    Base.@ccallable function jl_return_constraints_for_micro_iteration(subproblem_id::Ptr{UInt8},flow_list::FlowNList)::ViolatedFlowConstraints
+    
 
         F_N_values = Dict(unsafe_string(unsafe_load(flow_list.flows, i).line_id) => unsafe_load(flow_list.flows, i).value 
             for i in 1:flow_list.size)
@@ -516,9 +515,7 @@ module MyLib
 
         c_string_constraints = [pointer(constraint) for constraint in constraints_to_add] 
         constraints_ptr = pointer(c_string_constraints)
-
-        # GC.gc(true)        
-        return ConstraintsToAdd(constraints_ptr,Cint(length(constraints_to_add))) 
+        return ViolatedFlowConstraints(constraints_ptr,Cint(length(constraints_to_add))) 
     end 
 
     

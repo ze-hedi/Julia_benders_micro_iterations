@@ -1,1 +1,23 @@
-libmylib
+# Julia generated libraries and artifacts
+libmylib/
+libmylib2/
+libmyoutput_package/
+*.so
+*.tar.gz
+
+# Build artifacts and executables
+app1
+csv_extractor
+example_app
+p
+
+# Vim swap files
+*.swo
+*.swp
+
+# Test output files
+test_input_output.txt
+test_order_output.txt
+
+# Manifest (Julia dependency lock file - typically gitignored)
+Manifest.toml
