@@ -17,6 +17,9 @@ MicroIterationsLog::MicroIterationsLog(
                                                         + std::to_string(world->rank()) + ".log");
 
     log_file_.open(micro_iterations_log_path.c_str());
+    if (log_file_.is_open()) 
+    {
+    }
 
     output_root_ = output_root ; 
 
@@ -38,7 +41,6 @@ MicroIterationsLog::MicroIterationsLog(
                                                             / "added_constraints";
         if (!std::filesystem::exists(added_constraints_repo_path))
         {
-            std::cout << "creating the folder for the log per sub " << std::endl;
             std::filesystem::create_directories(added_constraints_repo_path);
         }
         else
@@ -57,14 +59,17 @@ void MicroIterationsLog::AddMasterIterationLog(int num_iter, std::string elapsed
 }
 
 void MicroIterationsLog::AddMicroIterionLog(std::string sub_name,
+                                            int num_micro_iter, 
+                                            int num_master_iter, 
                                             std::string solving_time,
-                                            std::string adding_rows_time,
                                             std::vector<std::string> added_constraints_keys)
+                                            
 {
     log_file_ << "<MICRO_ITERATION_" << sub_name << ">\n";
+    log_file_ <<"num micro iter : "<<num_micro_iter<<"\n"; 
     log_file_ << "solving time : " << solving_time << "\n";
-    log_file_ << "adding_rows_time : " << adding_rows_time << "\n";
     log_file_ << "</MICRO_ITERATION_" << sub_name << ">\n";
+
 }
 
 void MicroIterationsLog::AddMicroIterCount(std::string sub_name, int num_micro_iter)

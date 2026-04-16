@@ -40,7 +40,9 @@ void OnBendersMicroIterationEnd(std::string sub_name,
                                 std::vector<int>& variables_indices_vector,
                                 std::vector<std::string>& variables_names_vector,
                                 std::filesystem::path input_root,
-                                std::vector<std::string>& constraints_to_add_vec);
+                                std::vector<std::string>& constraints_to_add_vec, 
+                                int num_master_iter, 
+                                int num_micro_iter);
 void OnBendersSubResolutionStart();
 void OnBendersSubResolutionEnd(std::string sub_name, int num_micro_iter);
 

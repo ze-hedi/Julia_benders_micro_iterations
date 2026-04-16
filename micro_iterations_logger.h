@@ -73,8 +73,9 @@ public:
             - added_constraints_keys : keys of added constraints
     */
     void AddMicroIterionLog(std::string sub_name,
-                            std::string solving_name,
-                            std::string adding_rows_time,
+                            int num_micro_iter,
+                            int num_master_iter, 
+                            std::string solving_time,
                             std::vector<std::string> added_constraints_keys);
 
     void AddMicroIterCount(std::string sub_name, int num_micro_iter);

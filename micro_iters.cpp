@@ -19,7 +19,6 @@ std::shared_ptr<MicroIterationsLog> build_micro_iterations_logger(  const std::f
   int log_level) 
 {
 
-  std::cout<<"####### comuting the micro iterations logger "<<std::endl ; 
   auto micro_iterations_logger = std::make_shared<MicroIterationsLog>(
     output_root, 
     warm_start, 
@@ -188,10 +187,6 @@ void OnBendersStart(SubProblemsIds sub_problem_ids, int rank,std::filesystem::pa
 
     auto micro_iteration_logger = get_micro_iterations_logger(output_root, warm_start, world,log_level) ; 
 
-    if (micro_iteration_logger) 
-      std::cout<<"micro iterations logger is not null "<<std::endl ; 
-
-
 }
 
 void OnBendersIterationStart()
@@ -219,7 +214,9 @@ void OnBendersMicroIterationEnd(std::string sub_name,
                                 std::vector<int>& variables_indices_vector, 
                                 std::vector<std::string>& variables_names_vector,
                                 std::filesystem::path input_root, 
-                                std::vector<std::string>& constraints_to_add_vec)
+                                std::vector<std::string>& constraints_to_add_vec,
+                                int num_master_iter, 
+                                int num_micro_iter)
 {
 
     auto constraints_dict = get_constraints_dict(input_root)  ; 
@@ -241,24 +238,27 @@ void OnBendersMicroIterationEnd(std::string sub_name,
     N_flows.flows = flows_to_follow.data();
     N_flows.size = flows_to_follow.size(); 
 
+    auto t1 = std::chrono::high_resolution_clock::now();
+
     ViolatedFlowConstraints constraints_to_add = jl_return_constraints_for_micro_iteration(
                                                 sub_name.c_str(),
                                                 N_flows);
 
     added_rows = constraints_to_add.size ; 
+    std::vector<std::string> added_constraints_keys_at_micro_iteration ; 
     auto& added_constraints_families_per_sub = get_added_constraints_families_per_sub() ; 
     for (int i=0; i<constraints_to_add.size; i++) 
     {
       if (!check_if_constraints_family_added(sub_name,constraints_to_add.constraints[i]))
       {
         added_constraints_families_per_sub[sub_name].push_back(constraints_to_add.constraints[i]) ;
+        added_constraints_keys_at_micro_iteration.push_back(constraints_to_add.constraints[i]) ; 
         constraints_to_add_vec.insert(constraints_to_add_vec.end(), constraints_dict[constraints_to_add.constraints[i]].begin(), constraints_dict[constraints_to_add.constraints[i]].end()) ; 
       } 
     }
-
+    auto t2 = std::chrono::high_resolution_clock::now();
     auto micro_iter_logger = get_micro_iterations_logger() ; 
-    if (micro_iter_logger) 
-      std::cout<<"micro_iter_logger is not none from benders micro iteration end "<<std::endl ; 
+    micro_iter_logger->AddMicroIterionLog(sub_name,num_micro_iter,num_master_iter,solving_time,added_constraints_keys_at_micro_iteration) ; 
 
 }
 
