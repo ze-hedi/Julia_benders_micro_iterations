@@ -1,14 +1,46 @@
 #include "micro_iters.h"
+#include "micro_iterations_logger.h"
+
 
 #include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <memory>
 
 #include <boost/mpi.hpp>
 #include <boost/tokenizer.hpp>
 
 namespace mpi = boost::mpi;
+
+std::shared_ptr<MicroIterationsLog> build_micro_iterations_logger(  const std::filesystem::path& output_root,
+  bool warm_start,
+  mpi::communicator* world,
+  int log_level) 
+{
+
+  std::cout<<"####### comuting the micro iterations logger "<<std::endl ; 
+  auto micro_iterations_logger = std::make_shared<MicroIterationsLog>(
+    output_root, 
+    warm_start, 
+    world, 
+    log_level
+  ) ; 
+
+  return  micro_iterations_logger ; 
+
+}
+
+
+
+std::shared_ptr<MicroIterationsLog> get_micro_iterations_logger(  const std::filesystem::path& output_root="",
+  bool warm_start = false,
+  mpi::communicator* world = nullptr,
+  int log_level= 1) 
+{ 
+  static auto micro_iters_logger = build_micro_iterations_logger(output_root, warm_start, world, log_level) ; 
+  return micro_iters_logger;
+}
 
 std::map<std::string,std::vector<std::string>> read_constraints_dict(std::filesystem::path& input_root)
 {
@@ -76,6 +108,9 @@ std::map<std::string, std::string> read_variables_dictionary(
     return variables_to_follow;
 }
 
+
+
+
 const std::map<std::string, std::string>& get_variables_dictionary(
   const std::filesystem::path& input_root = ".")
 {
@@ -83,6 +118,43 @@ const std::map<std::string, std::string>& get_variables_dictionary(
     static auto variables_to_follow_dict = read_variables_dictionary(input_root);
     return variables_to_follow_dict;
 }
+
+
+std::map<std::string,std::string> read_binary_variables_ids_map(const std::filesystem::path& input_root = ".")
+{
+
+
+    std::map<std::string,std::string> binary_variables_ids_map_ ;  
+    // Reading investement dictionary
+    std::filesystem::path investment_dictionary_path = input_root / "investment_dictionary.csv";
+    std::ifstream investment_dict_path(investment_dictionary_path.c_str());
+
+    if (investment_dict_path.is_open())
+    {
+        std::string row;
+        typedef boost::tokenizer<boost::escaped_list_separator<char>> Tokenizer;
+
+        while (std::getline(investment_dict_path, row))
+        {
+            Tokenizer tok(row);
+            std::vector<std::string> tokens(tok.begin(), tok.end());
+            binary_variables_ids_map_[tokens[1]] = tokens[0];
+        }
+    }
+    else
+    {
+        std::cerr << "unable to open : " << investment_dictionary_path.c_str() << std::endl;
+        exit(EXIT_FAILURE);
+    }
+    return binary_variables_ids_map_ ; 
+}
+
+const std::map<std::string,std::string> get_binary_variables_ids_map(const std::filesystem::path& input_root = ".")
+{
+  static auto binary_variables_ids = read_binary_variables_ids_map(input_root) ; 
+  return binary_variables_ids ; 
+}
+
 
 
 std::map<std::string, std::vector<std::string>>& get_added_constraints_families_per_sub() 
@@ -103,14 +175,21 @@ bool check_if_constraints_family_added(std::string sub_name,const char* violated
 
 extern "C"
 {
-void OnBendersStart(SubProblemsIds sub_problem_ids, int rank,std::filesystem::path& input_root)
+void OnBendersStart(SubProblemsIds sub_problem_ids, int rank,std::filesystem::path input_root, std::filesystem::path output_root, 
+                  bool warm_start, mpi::communicator* world, int log_level )
 {
     init_julia(0, NULL);
     static std::map<std::string, std::vector<std::string>> added_constraints_families_per_sub ; 
     jl_load_variables(sub_problem_ids, rank);
 
-    auto variables_to_follow_dict = get_variables_dictionary(input_root);
+
+    auto variables_to_follow_dict = get_variables_dictionary(output_root);
     auto constraints_dict = get_constraints_dict(input_root) ; 
+
+    auto micro_iteration_logger = get_micro_iterations_logger(output_root, warm_start, world,log_level) ; 
+
+    if (micro_iteration_logger) 
+      std::cout<<"micro iterations logger is not null "<<std::endl ; 
 
 
 }
@@ -173,15 +252,13 @@ void OnBendersMicroIterationEnd(std::string sub_name,
       if (!check_if_constraints_family_added(sub_name,constraints_to_add.constraints[i]))
       {
         added_constraints_families_per_sub[sub_name].push_back(constraints_to_add.constraints[i]) ;
-        std::cout<<"!!!! size of constraints vector to add "<<constraints_dict[constraints_to_add.constraints[i]].size()<<std::endl ; 
         constraints_to_add_vec.insert(constraints_to_add_vec.end(), constraints_dict[constraints_to_add.constraints[i]].begin(), constraints_dict[constraints_to_add.constraints[i]].end()) ; 
-        std::cout<<"####### constraints_to_add_vec "<<constraints_to_add_vec.size()<<std::endl; 
       } 
-      else 
-      {
-        std::cout<<"contraint is already added "<<std::endl ; 
-      }
     }
+
+    auto micro_iter_logger = get_micro_iterations_logger() ; 
+    if (micro_iter_logger) 
+      std::cout<<"micro_iter_logger is not none from benders micro iteration end "<<std::endl ; 
 
 }
 
@@ -190,9 +267,12 @@ void OnBendersMasterResolutionStart(
   int& num_iter,
   mpi::communicator* world,
   std::map<std::string, std::vector<std::string>>& added_constraintes_per_sub,
-  std::map<std::string, std::string>& binary_variables_ids_map)
+  std::filesystem::path input_root)
 
 {
+
+    auto binary_variables_ids_map = get_binary_variables_ids_map(input_root) ;
+    
 
     for (auto& [sub, _]: added_constraintes_per_sub)
     {
@@ -267,6 +347,10 @@ void OnBendersMasterResolutionStart(
     auto t2 = std::chrono::high_resolution_clock::now();
     auto elapsed_microseconds = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1)
                                   .count();
+
+    auto micro_iterations_logger = get_micro_iterations_logger()  ;
+    micro_iterations_logger->AddMasterIterationLog(num_iter,std::to_string(elapsed_microseconds)) ; 
+
 }
 
 void OnBendersMasterResolutionEnd()

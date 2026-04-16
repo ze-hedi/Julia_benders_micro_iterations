@@ -20,7 +20,8 @@ extern "C"
 {
 #endif
 
-void OnBendersStart(SubProblemsIds, int,std::filesystem::path&);
+void OnBendersStart(SubProblemsIds, int, std::filesystem::path, std::filesystem::path, 
+                       bool, mpi::communicator*, int);
 void OnBendersEnd();
 void OnBendersIterationStart();
 void OnBendersIterationEnd();
@@ -29,7 +30,7 @@ void OnBendersMasterResolutionStart(
   int& num_iters,
   mpi::communicator* world,
   std::map<std::string, std::vector<std::string>>& added_constraintes_per_sub,
-  std::map<std::string, std::string>& binary_variables_ids_map);
+  std::filesystem::path input_root);
 void OnBendersMasterResolutionEnd();
 void OnBendersMicroIterationStart();
 void OnBendersMicroIterationEnd(std::string sub_name,
@@ -39,7 +40,7 @@ void OnBendersMicroIterationEnd(std::string sub_name,
                                 std::vector<int>& variables_indices_vector,
                                 std::vector<std::string>& variables_names_vector,
                                 std::filesystem::path input_root,
-                                std::vector<std::string>& constraints_to_add);
+                                std::vector<std::string>& constraints_to_add_vec);
 void OnBendersSubResolutionStart();
 void OnBendersSubResolutionEnd(std::string sub_name, int num_micro_iter);
 

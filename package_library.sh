@@ -15,7 +15,7 @@ mkdir -p "${PACKAGE_DIR}/include"
 
 # Recompile libmyoutput.so with correct rpath for package
 echo "Recompiling libmyoutput.so with package-friendly rpath..."
-g++ -shared -fPIC micro_iters.cpp \
+g++ -shared -fPIC micro_iters.cpp micro_iterations_logger.cpp \
     -I./libmylib/include \
     -I/usr/include/julia \
     -I/usr/lib/x86_64-linux-gnu/openmpi/include \
