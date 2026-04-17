@@ -100,7 +100,7 @@ module MyLib
     Base.@ccallable function jl_load_variables(subproblems_ids::SubProblemsIds,rank::Cint)::Cvoid
 
 
-        path_input_julia = "./inputs_julia"
+        path_input_julia = "./plugin_inputs/inputs_julia"
         global vars_dict = Dict{String, Any}() 
         
 

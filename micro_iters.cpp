@@ -45,7 +45,7 @@ std::map<std::string,std::vector<std::string>> read_constraints_dict(std::filesy
 {
 
     std::map<std::string,std::vector<std::string>> result ; 
-    std::filesystem::path constraints_csv_path = input_root / "constraints_dictionary.csv";
+    std::filesystem::path constraints_csv_path = input_root/"plugin_inputs" / "constraints_dictionary.csv";
     std::ifstream constraints_csv_stream(constraints_csv_path.c_str());
 
     if (constraints_csv_stream.is_open())
@@ -85,7 +85,7 @@ std::map<std::string,std::vector<std::string>>  get_constraints_dict(std::filesy
 std::map<std::string, std::string> read_variables_dictionary(
   const std::filesystem::path& input_root)
 {
-    std::filesystem::path variables_dictionary_path = input_root / "variables_dictionary.csv";
+    std::filesystem::path variables_dictionary_path = input_root/"plugin_inputs" / "variables_dictionary.csv";
     std::ifstream variables_dict(variables_dictionary_path.c_str());
     std::map<std::string, std::string> variables_to_follow;
     if (variables_dict.is_open())
@@ -125,7 +125,7 @@ std::map<std::string,std::string> read_binary_variables_ids_map(const std::files
 
     std::map<std::string,std::string> binary_variables_ids_map_ ;  
     // Reading investement dictionary
-    std::filesystem::path investment_dictionary_path = input_root / "investment_dictionary.csv";
+    std::filesystem::path investment_dictionary_path = input_root /"plugin_inputs"/ "investment_dictionary.csv";
     std::ifstream investment_dict_path(investment_dictionary_path.c_str());
 
     if (investment_dict_path.is_open())
@@ -162,6 +162,16 @@ std::map<std::string, std::vector<std::string>>& get_added_constraints_families_
   return added_constraints_families_per_sub ; 
 }
 
+
+void clean_added_constraints_families_per_sub() 
+{
+  auto& added_constraints_families_per_sub = get_added_constraints_families_per_sub() ; 
+  for (auto& [sub_name,_] : added_constraints_families_per_sub) 
+  {
+    added_constraints_families_per_sub.clear() ; 
+  }
+}
+
 bool check_if_constraints_family_added(std::string sub_name,const char* violated_constraints_family) 
 {
   auto& added_constraints_families_per_sub = get_added_constraints_families_per_sub() ; 
@@ -191,6 +201,7 @@ void OnBendersStart(SubProblemsIds sub_problem_ids, int rank,std::filesystem::pa
 
 void OnBendersIterationStart()
 {
+  clean_added_constraints_families_per_sub() ; 
 }
 
 void OnBendersIterationEnd()
