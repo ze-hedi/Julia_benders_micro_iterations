@@ -1,9 +1,9 @@
 #!/bin/bash
-# Script to create a self-contained package of libmyoutput.so with all dependencies
+# Script to create a self-contained package of micro_iters_plugin.so with all dependencies
 
 set -e
 
-PACKAGE_NAME="libmyoutput_package"
+PACKAGE_NAME="plugin_package"
 PACKAGE_DIR="./${PACKAGE_NAME}"
 
 echo "Creating self-contained package: ${PACKAGE_NAME}"
@@ -14,27 +14,27 @@ mkdir -p "${PACKAGE_DIR}/lib"
 mkdir -p "${PACKAGE_DIR}/include"
 
 # Recompile libmyoutput.so with correct rpath for package
-echo "Recompiling libmyoutput.so with package-friendly rpath..."
+echo "Recompiling micro_iters_plugin.so with package-friendly rpath..."
 g++ -shared -fPIC micro_iters.cpp micro_iterations_logger.cpp \
-    -I./libmylib/include \
+    -I./libGridModelisation/include \
     -I/usr/include/julia \
     -I/usr/lib/x86_64-linux-gnu/openmpi/include \
     -I/usr/lib/x86_64-linux-gnu/openmpi/include/openmpi \
-    -L./libmylib/lib \
+    -L./libGridModelisation/lib \
     -L/usr/lib/x86_64-linux-gnu/openmpi/lib \
-    -lmylib -ljulia \
+    -lGridModelisation -ljulia \
     -lboost_mpi -lboost_serialization -lmpi_cxx -lmpi \
     -Wl,-rpath,'$ORIGIN' \
-    -o "${PACKAGE_DIR}/lib/libmyoutput.so"
+    -o "${PACKAGE_DIR}/lib/micro_iters_plugin.so"
 
-# Copy libmylib dependencies
-echo "Copying libmylib dependencies..."
-cp -r libmylib/lib/* "${PACKAGE_DIR}/lib/"
+# Copy libGridModelisation dependencies
+echo "Copying libGridModelisation dependencies..."
+cp -r libGridModelisation/lib/* "${PACKAGE_DIR}/lib/"
 
 # Copy headers if they exist
-if [ -d "libmylib/include" ]; then
+if [ -d "libGridModelisation/include" ]; then
     echo "Copying headers..."
-    cp -r libmylib/include/* "${PACKAGE_DIR}/include/"
+    cp -r libGridModelisation/include/* "${PACKAGE_DIR}/include/"
 fi
 
 # Copy MyLib.h if it exists
@@ -43,15 +43,15 @@ if [ -f "MyLib.h" ]; then
 fi
 
 # Copy artifacts directory for Julia dependencies
-if [ -d "libmylib/share/julia/artifacts" ]; then
+if [ -d "libGridModelisation/share/julia/artifacts" ]; then
     echo "Copying Julia artifacts..."
     mkdir -p "${PACKAGE_DIR}/share/julia"
-    cp -r libmylib/share/julia/artifacts "${PACKAGE_DIR}/share/julia/"
+    cp -r libGridModelisation/share/julia/artifacts "${PACKAGE_DIR}/share/julia/"
 fi
 
 # Create a usage README
 cat > "${PACKAGE_DIR}/README.md" << 'EOF'
-# libmyoutput Package
+# micro_iters_plugin Package
 
 This is a self-contained package with all dependencies.
 
@@ -59,8 +59,8 @@ This is a self-contained package with all dependencies.
 ```
 libmyoutput_package/
 ├── lib/                  # All shared libraries
-│   ├── libmyoutput.so   # Main library
-│   ├── libmylib.so      # MyLib dependency
+│   ├── micro_iters_plugin.so   # Main library
+│   ├── libGridModelisation.so      # MyLib dependency
 │   └── julia/           # Julia runtime libraries
 ├── include/             # Header files
 └── share/
@@ -104,7 +104,7 @@ g++ your_app.cpp \
 ```
 
 ## Dependencies Included
-- libmylib.so
+- libGridModelisation.so
 - Julia runtime libraries (libjulia.so, libjulia-internal.so, etc.)
 - All Julia support libraries (libgcc_s, libunwind, libz, libatomic, libstdc++, etc.)
 - Julia artifacts (binary dependencies for packages like Libiconv_jll, etc.)
@@ -113,7 +113,7 @@ g++ your_app.cpp \
 To check that all dependencies are included:
 ```bash
 cd lib
-ldd libmyoutput.so
+ldd micro_iters_plugin.so
 ```
 
 All libraries should show paths relative to this package (no "not found" errors).

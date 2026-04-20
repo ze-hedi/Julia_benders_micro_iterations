@@ -12,7 +12,7 @@ namespace mpi = boost::mpi;
 #include "MyLib.h"
 extern "C"
 {
-#include "libmylib/include/julia_init.h"
+#include "libGridModelisation/include/julia_init.h"
 }
 
 #ifdef __cplusplus

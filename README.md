@@ -7,7 +7,7 @@ A high-performance C++/Julia hybrid library for implementing Benders decompositi
 - [Architecture](#architecture)
 - [How It Works](#how-it-works)
 - [Building the Library](#building-the-library)
-- [Using libmyoutput.so](#using-libmyoutputso)
+- [Using micro_iters_plugin.so](#using-micro_iters_pluginso)
 - [API Reference](#api-reference)
 - [Example Usage](#example-usage)
 - [Deployment](#deployment)
@@ -16,19 +16,12 @@ A high-performance C++/Julia hybrid library for implementing Benders decompositi
 
 ## Overview
 
-This library solves large-scale power grid optimization problems using Benders decomposition with **micro-iterations**. The workflow involves:
-
-1. **Benders Master Problem**: Determines candidate line investments (binary decisions)
-2. **Micro-Iterations**: For each subproblem, iteratively adds violated flow constraints until feasibility
-3. **Network Computations**: Uses Julia to compute:
-   - PTDF matrices (Power Transfer Distribution Factors)
-   - HVDC sensitivity matrices
-   - Incident factors for N-K security analysis
-   - Constraint violations based on flow solutions
+This library  is an add-on to integrate the micro iteration mechanism in the benders decomposition of Antares Xpansion
+It doesn't handle any of the heavy compute tasks such as solving optimization problems or reading mps.
 
 ### Why Julia + C++?
 
-- **Julia**: High-performance matrix computations (PTDF, sensitivity analysis)
+- **Julia**: High-performance matrix computations (PTDF, sensitivity analysis). Our modelling team are mostly working with Julia this is also way we've decided to keep this in Julia
 - **C++**: Integration with existing optimization solvers (e.g., CPLEX, Gurobi)
 - **Hybrid approach**: Best of both worlds - Julia's speed for numerical computing, C++'s ecosystem for optimization
 
@@ -44,7 +37,7 @@ This library solves large-scale power grid optimization problems using Benders d
                          │
                          ↓
 ┌─────────────────────────────────────────────────────────────┐
-│                   libmyoutput.so (C++)                       │
+│                   plugin_package.so (C++)                       │
 │                  micro_iters.cpp/h                           │
 │   • OnBendersStart()                                         │
 │   • OnBendersMasterResolutionStart()                         │
@@ -54,7 +47,8 @@ This library solves large-scale power grid optimization problems using Benders d
                          │
                          ↓
 ┌─────────────────────────────────────────────────────────────┐
-│                    libmylib.so (Julia)                       │
+│                    libGridModelisation.so                    │
+|                       (Julia)                                |
 │                   Compiled from MyLib.jl                     │
 │   • jl_load_variables()                                      │
 │   • jl_compute_factors_for_microiterations()                 │
@@ -75,8 +69,8 @@ This library solves large-scale power grid optimization problems using Benders d
    - Manages Benders iteration lifecycle
    - Handles MPI communication between processes
 
-3. **compile.jl / compile2.jl** - Build scripts
-   - Compile Julia code to shared library (.so)
+3. **compile.jl** - Build script
+   - Compiles Julia code to shared library (.so)
    - Uses PackageCompiler.jl
 
 4. **package_library.sh** - Packaging script
@@ -171,26 +165,26 @@ sudo apt-get install g++ libboost-mpi-dev libboost-serialization-dev openmpi-bin
 ```
 
 This script:
-1. Cleans previous builds (`libmylib/`, `libmylib2/`, `libmyoutput_package/`)
-2. Compiles Julia libraries in parallel (`compile.jl` & `compile2.jl`)
-3. Packages everything into `libmyoutput_package/`
+1. Cleans previous builds (`libGridModelisation/`,  `libmyoutput_package/`)
+2. Compiles Julia libraries in parallel (`compile.jl` )
+3. Packages everything into `plugin_package/`
 
 #### Option 2: Manual Step-by-Step Build
 
 ```bash
 # Step 1: Compile Julia library
 julia compile.jl
-# Output: libmylib/ directory with libmylib.so
+# Output: libGridModelisation/ directory with libGridModelisation.so
 
 # Step 2: Build C++ wrapper library
-g++ -shared -fPIC micro_iters.cpp \
-    -I./libmylib/include \
+g++ -shared -fPIC micro_iters.cpp micro_iterations_logger.cpp \
+    -I./libGridModelisation/include \
     -I/usr/include/julia \
-    -L./libmylib/lib \
-    -lmylib -ljulia \
+    -L./libGridModelisation/lib \
+    -lGridModelisation -ljulia \
     -lboost_mpi -lboost_serialization -lmpi_cxx -lmpi \
     -Wl,-rpath,'$ORIGIN' \
-    -o libmyoutput.so
+    -o micro_iters_plugin.so
 
 # Step 3: Package for distribution
 ./package_library.sh
@@ -199,10 +193,10 @@ g++ -shared -fPIC micro_iters.cpp \
 ### Build Output
 
 ```
-libmyoutput_package/
+plugin_package/
 ├── lib/
-│   ├── libmyoutput.so          # Main C++ wrapper (your API)
-│   ├── libmylib.so             # Compiled Julia library (~459 MB)
+│   ├── micro_iters_plugin.so   # Main C++ wrapper (your API)
+│   ├── libGridModelisation.so  # Compiled Julia library (~459 MB)
 │   └── julia/                  # Julia runtime dependencies
 │       ├── libjulia.so.1.11
 │       ├── libjulia-internal.so.1.11
@@ -215,7 +209,7 @@ libmyoutput_package/
 
 ---
 
-## Using libmyoutput.so
+## Using micro_iters_plugin.so
 
 ### Integration in Your C++ Project
 
@@ -247,22 +241,22 @@ int main() {
 
 **Method A: Using LD_LIBRARY_PATH (Development)**
 ```bash
-export LD_LIBRARY_PATH=/path/to/libmyoutput_package/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=/path/to/plugin_package/lib:$LD_LIBRARY_PATH
 
 g++ your_app.cpp \
-    -I/path/to/libmyoutput_package/include \
-    -L/path/to/libmyoutput_package/lib \
-    -lmyoutput -lboost_mpi -lboost_serialization -lmpi_cxx -lmpi \
+    -I/path/to/plugin_package/include \
+    -L/path/to/plugin_package/lib \
+    -lmicro_iters_plugin -lboost_mpi -lboost_serialization -lmpi_cxx -lmpi \
     -o your_app
 ```
 
 **Method B: Using RPATH (Production)**
 ```bash
 g++ your_app.cpp \
-    -I/path/to/libmyoutput_package/include \
-    -L/path/to/libmyoutput_package/lib \
-    -lmyoutput -lboost_mpi -lboost_serialization -lmpi_cxx -lmpi \
-    -Wl,-rpath,/path/to/libmyoutput_package/lib \
+    -I/path/to/plugin_package/include \
+    -L/path/to/plugin_package/lib \
+    -lmicro_iters_plugin -lboost_mpi -lboost_serialization -lmpi_cxx -lmpi \
+    -Wl,-rpath,/path/to/plugin_package/lib \
     -o your_app
 ```
 
@@ -272,12 +266,12 @@ g++ your_app.cpp \
 # project/
 # ├── bin/
 # │   └── your_app
-# └── lib/  (copy libmyoutput_package/lib/* here)
+# └── lib/  (copy plugin_package/lib/* here)
 
 g++ your_app.cpp \
-    -I/path/to/libmyoutput_package/include \
-    -L/path/to/libmyoutput_package/lib \
-    -lmyoutput -lboost_mpi -lboost_serialization -lmpi_cxx -lmpi \
+    -I/path/to/plugin_package/include \
+    -L/path/to/plugin_package/lib \
+    -lmicro_iters_plugin -lboost_mpi -lboost_serialization -lmpi_cxx -lmpi \
     -Wl,-rpath,'$ORIGIN/../lib' \
     -o project/bin/your_app
 ```
@@ -573,14 +567,14 @@ int main(int argc, char** argv) {
 
 extern "C" {
     void OnBendersStart(SubProblemsIds, int);
-    #include "libmylib/include/julia_init.h"
+    #include "libGridModelisation/include/julia_init.h"
 }
 
 int main() {
     // Initialize Julia
     init_julia(0, NULL);
     
-    std::cout << "Example usage of libmyoutput.so" << std::endl;
+    std::cout << "Example usage of micro_iters_plugin.so" << std::endl;
     
     // Create subproblem IDs
     char* sub_ids[] = {(char*)"subproblem_1", (char*)"subproblem_2"};
@@ -603,11 +597,11 @@ int main() {
 
 **Compile and run:**
 ```bash
-cd libmyoutput_package
+cd plugin_package
 g++ example_usage.cpp \
     -I./include \
     -L./lib \
-    -lmyoutput \
+    -lmicro_iters_plugin \
     -Wl,-rpath,'$ORIGIN/lib' \
     -o example_app
 
@@ -623,20 +617,20 @@ g++ example_usage.cpp \
 #### 1. Copy the Package
 ```bash
 # Copy entire package directory
-cp -r libmyoutput_package /path/to/other/repo/
+cp -r plugin_package /path/to/other/repo/
 
 # OR use tar archive
-tar -czf libmyoutput_package.tar.gz libmyoutput_package/
-scp libmyoutput_package.tar.gz user@remote:/path/
+tar -czf plugin_package.tar.gz plugin_package/
+scp plugin_package.tar.gz user@remote:/path/
 
 # On remote:
-tar -xzf libmyoutput_package.tar.gz
+tar -xzf plugin_package.tar.gz
 ```
 
 #### 2. Verify Dependencies
 ```bash
-cd libmyoutput_package/lib
-ldd libmyoutput.so
+cd plugin_package/lib
+ldd micro_iters_plugin.so
 # Should show no "not found" errors
 ```
 
@@ -674,7 +668,7 @@ inputs/
 
 ### Important Notes
 
-1. **Keep libraries together** - Do NOT separate `libmyoutput.so` from `libmylib.so` and Julia libraries
+1. **Keep libraries together** - Do NOT separate `micro_iters_plugin.so` from `libGridModelisation.so` and Julia libraries
 2. **Preserve directory structure** - The `lib/julia/` subdirectory is required
 3. **Platform-specific** - This is a Linux x86_64 build; rebuild for other platforms
 4. **MPI required** - Your system needs OpenMPI or MPICH installed
@@ -709,17 +703,17 @@ The `compile.jl` file now uses `include_transitive_dependencies=false` to avoid 
 ### Library Not Found Errors
 ```bash
 # Check dependencies
-ldd libmyoutput_package/lib/libmyoutput.so
+ldd plugin_package/lib/micro_iters_plugin.so
 
 # Set LD_LIBRARY_PATH if needed
-export LD_LIBRARY_PATH=/path/to/libmyoutput_package/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=/path/to/plugin_package/lib:$LD_LIBRARY_PATH
 ```
 
 ### Julia Initialization Errors
 ```
-ERROR: could not load library "libmylib.so"
+ERROR: could not load library "libGridModelisation.so"
 ```
-Solution: Ensure `libmylib.so` is in the same directory as `libmyoutput.so`
+Solution: Ensure `libGridModelisation.so` is in the same directory as `micro_iters_plugin.so`
 
 ### MPI Errors
 ```
