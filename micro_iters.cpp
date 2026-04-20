@@ -206,7 +206,7 @@ void OnBendersIterationStart()
 
 void OnBendersIterationEnd()
 {
-    jl_call_GC();
+  jl_call_GC();
 }
 
 void OnBendersEnd()
@@ -216,6 +216,7 @@ void OnBendersEnd()
 
 void OnBendersMicroIterationStart()
 {
+
 }
 
 void OnBendersMicroIterationEnd(std::string sub_name,
