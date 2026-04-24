@@ -202,10 +202,12 @@ void OnBendersStart(SubProblemsIds sub_problem_ids, int rank,std::filesystem::pa
 void OnBendersIterationStart()
 {
   clean_added_constraints_families_per_sub() ; 
+  jl_gc_enable(0) ; 
 }
 
 void OnBendersIterationEnd()
 {
+  jl_gc_enable(1) , 
   jl_call_GC();
 }
 

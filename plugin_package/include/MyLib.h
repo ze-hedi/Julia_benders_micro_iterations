@@ -66,6 +66,7 @@ struct ViolatedFlowConstraints
 void jl_load_variables(SubProblemsIds,int) ; 
 void jl_test_output() ; 
 void jl_call_GC() ; 
+int jl_gc_enable(int on); 
 SerializedFactors jl_compute_factors_for_microiterations(CandidateLineInvestmentStatusList,int) ; 
 void jl_clean_buffers() ; 
 void jl_deserialize_factors(SerializedFactors) ; 
