@@ -1,6 +1,9 @@
 #!/bin/bash
 # Script to create a self-contained package of micro_iters_plugin.so with all dependencies
 
+
+
+
 set -e
 
 PACKAGE_NAME="plugin_package"

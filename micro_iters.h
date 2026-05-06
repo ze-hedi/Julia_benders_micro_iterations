@@ -25,13 +25,13 @@ void OnBendersStart(SubProblemsIds, int, std::filesystem::path, std::filesystem:
 void OnBendersEnd();
 void OnBendersIterationStart();
 void OnBendersIterationEnd();
-void OnBendersMasterResolutionStart(
+void  OnBendersMasterResolutionStart();
+void OnBendersMasterResolutionEnd(
   std::map<std::string, double>& master_out,
   int& num_iters,
   mpi::communicator* world,
   std::map<std::string, std::vector<std::string>>& added_constraintes_per_sub,
   std::filesystem::path input_root);
-void OnBendersMasterResolutionEnd();
 void OnBendersMicroIterationStart();
 void OnBendersMicroIterationEnd(std::string sub_name,
                                 bool& added_rows,

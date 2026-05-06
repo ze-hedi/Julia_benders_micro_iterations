@@ -276,7 +276,7 @@ void OnBendersMicroIterationEnd(std::string sub_name,
 
 }
 
-void OnBendersMasterResolutionStart(
+void  OnBendersMasterResolutionEnd(
   std::map<std::string, double>& master_out,
   int& num_iter,
   mpi::communicator* world,
@@ -367,18 +367,15 @@ void OnBendersMasterResolutionStart(
 
 }
 
-void OnBendersMasterResolutionEnd()
+void OnBendersMasterResolutionStart()
 {
-    // Can be used for cleanup or post-processing after master resolution
 }
 
 void OnBendersSubResolutionStart()
 {
-    // Can be used to prepare before subproblem resolution starts
 }
 
 void OnBendersSubResolutionEnd(std::string sub_name, int num_micro_iter)
 {
-    // Can be used for logging or statistics after subproblem resolution
 }
 }
