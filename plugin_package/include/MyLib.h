@@ -43,6 +43,7 @@ struct SerializedFactors
     SerializedObject HVDC_dict_serialized;
     SerializedObject dict_incident_factors_serialized;
     SerializedObject all_monitored_branches_serialized;
+
 };
 
 struct FlowN
