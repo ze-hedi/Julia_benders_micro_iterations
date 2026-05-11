@@ -88,9 +88,8 @@ int main(int argc, char* argv[])
     // Read CSV into map and vector (preserving order)
     auto csv_data = read_csv_to_map(csv_path);
     
-    // Create output filename by replacing .csv extension with _output.txt
-    std::filesystem::path output_path = csv_path.parent_path() / 
-                                        (csv_path.stem().string() + "_output.txt");
+    // Create output filename
+    std::filesystem::path output_path = csv_path.parent_path() / "variable_names.txt";
     
     // Write second column to output file
     write_second_column_to_file(csv_data, output_path);
