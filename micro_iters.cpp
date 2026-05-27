@@ -202,12 +202,12 @@ void OnBendersStart(SubProblemsIds sub_problem_ids, int rank,std::filesystem::pa
 void OnBendersIterationStart()
 {
   clean_added_constraints_families_per_sub() ; 
-  jl_gc_enable(0) ; 
+  // jl_gc_enable(0) ; 
 }
 
 void OnBendersIterationEnd()
 {
-  jl_gc_enable(1) , 
+  // jl_gc_enable(1) , 
   jl_call_GC();
 }
 
@@ -287,7 +287,8 @@ void  OnBendersMasterResolutionEnd(
 
     auto binary_variables_ids_map = get_binary_variables_ids_map(input_root) ;
     
-    std::cout<<"binary_variables_ids_map size "<<binary_variables_ids_map.size()<<std::endl ; 
+    // 
+    // t<<"binary_variables_ids_map size "<<binary_variables_ids_map.size()<<std::endl ; 
 
     for (auto& [sub, _]: added_constraintes_per_sub)
     {
@@ -301,7 +302,6 @@ void  OnBendersMasterResolutionEnd(
         auto id_in_csv = binary_variables_ids_map[line].c_str();
         candidates_iter_res.push_back(CandidateLineInvestmentStatus{id_in_csv, value});
     }
-    std::cout<<"master out size "<<master_out.size()<<std::endl ;
     CandidateLineInvestmentStatusList master_benders_input = CandidateLineInvestmentStatusList{
       candidates_iter_res.data(),
       master_out.size()};
@@ -317,6 +317,7 @@ void  OnBendersMasterResolutionEnd(
 
     if (world->rank() == 0)
     {
+
         SerializedFactors serialized_factors = jl_compute_factors_for_microiterations(
           master_benders_input,
           num_iter);
@@ -329,7 +330,6 @@ void  OnBendersMasterResolutionEnd(
         serialized_buffs.dict_incident_factors_serialized_buff.assign(serialized_factors.dict_incident_factors_serialized.bytes_ptr,serialized_factors.dict_incident_factors_serialized.bytes_ptr + serialized_factors.dict_incident_factors_serialized.bytes_length) ; 
         serialized_buffs.all_monitored_branches_serialized_buff.assign(serialized_factors.all_monitored_branches_serialized.bytes_ptr,serialized_factors.all_monitored_branches_serialized.bytes_ptr + serialized_factors.all_monitored_branches_serialized.bytes_length) ; 
 
-        // serialized_buffs.dict_incident_factors_serialized_buff.assign()
         // std::memcpy(serialized_buffs.HVDC_dict_serialized_buff.data(),
         //             serialized_factors.HVDC_dict_serialized.bytes_ptr,
         //             serialized_factors.HVDC_dict_serialized.bytes_length * sizeof(uint8_t));
@@ -348,6 +348,9 @@ void  OnBendersMasterResolutionEnd(
         //             serialized_factors.all_monitored_branches_serialized.bytes_length
         //               * sizeof(uint8_t));
         jl_clean_buffers();
+        // jl_gc_enable(1);                                                                    
+        jl_call_GC();                                                                         
+        // jl_gc_enable(0);  
     }
 
     mpi::broadcast(*world, serialized_buffs, 0);

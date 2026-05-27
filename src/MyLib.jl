@@ -70,17 +70,17 @@ module MyLib
 
 
 
-    function serialize_obj(obj_2_serialize) 
+    function serialize_obj(obj_2_serialize)
 
-        buf = IOBuffer() 
-        serialize(buf,obj_2_serialize) 
+        buf = IOBuffer()
+        serialize(buf,obj_2_serialize)
 
         bytes = take!(buf)
         n = length(bytes)
         ptr = pointer(bytes)
 
-        return ptr, n 
-    end 
+        return ptr, n, bytes
+    end
 
 
     function deserialize_obj(bytes_ptr, bytes_len)
@@ -106,8 +106,6 @@ module MyLib
 
         dict_subproblems = Dict{String,Vector{String}}() 
         sizehint!(dict_subproblems,subproblems_ids.n_subproblems)
-
-    
         for i in 1:subproblems_ids.n_subproblems 
             key = unsafe_string(unsafe_load(subproblems_ids.subProblems_ids,i))
             dict_subproblems[key] = String[]
@@ -161,12 +159,12 @@ module MyLib
         vars_dict["max_flows_N_K"] = max_flows_N_K
      
 
-        vars_dict["HVDC_new_dict"] = nothing 
-        vars_dict["dict_incident_factors"] = nothing 
-        vars_dict["all_monitored_branches"] = nothing 
+        vars_dict["HVDC_new_dict"] = nothing
+        vars_dict["dict_incident_factors"] = nothing
+        vars_dict["all_monitored_branches"] = nothing
 
-
-        return nothing 
+        GC.gc(true)
+        return nothing
 
     end
 
@@ -367,38 +365,42 @@ module MyLib
         
         HVDC_new_dict = helper_convert_sensitivity_array_to_dict(HVDC_new[intersect(names(HVDC_new, 1), branches_to_keep_in_sensi_dicts), :])
 
-
         dict_incident_factors = compute_incident_factors_after_lines_removal(all_monitored_branches, branches_invested, PTDF_new)
         t2 = time_ns() 
 
         elapsed_microseconds = (t2 - t1) / 1000 
 
-        vars_dict["HVDC_new_dict"] = HVDC_new_dict 
-        HVDC_new_dict_serialized_ptr, HVDC_new_dict_bytes_len  = serialize_obj(HVDC_new_dict) 
-        HVDC_new_dict_serialized_serialized_obj = SerializedObject(HVDC_new_dict_serialized_ptr,HVDC_new_dict_bytes_len)    
+        vars_dict["HVDC_new_dict"] = HVDC_new_dict
+        HVDC_new_dict_serialized_ptr, HVDC_new_dict_bytes_len, HVDC_bytes  = serialize_obj(HVDC_new_dict)
+        HVDC_new_dict_serialized_serialized_obj = SerializedObject(HVDC_new_dict_serialized_ptr,HVDC_new_dict_bytes_len)
 
         vars_dict["dict_incident_factors"] = dict_incident_factors
-        dict_incident_factors_serialized_ptr, dict_incident_factors_bytes_len  = serialize_obj(dict_incident_factors) 
-        dict_incident_factors_serialized_obj = SerializedObject(dict_incident_factors_serialized_ptr,dict_incident_factors_bytes_len) 
+        dict_incident_factors_serialized_ptr, dict_incident_factors_bytes_len, incident_bytes  = serialize_obj(dict_incident_factors)
+        dict_incident_factors_serialized_obj = SerializedObject(dict_incident_factors_serialized_ptr,dict_incident_factors_bytes_len)
 
-        vars_dict["all_monitored_branches"] = all_monitored_branches 
-        all_monitored_branches_serialized_ptr, all_monitored_branches_bytes_len  = serialize_obj(all_monitored_branches) 
-        all_monitored_branches_serialized_obj = SerializedObject(all_monitored_branches_serialized_ptr,all_monitored_branches_bytes_len) 
+        vars_dict["all_monitored_branches"] = all_monitored_branches
+        all_monitored_branches_serialized_ptr, all_monitored_branches_bytes_len, branches_bytes  = serialize_obj(all_monitored_branches)
+        all_monitored_branches_serialized_obj = SerializedObject(all_monitored_branches_serialized_ptr,all_monitored_branches_bytes_len)
 
-        new_msg = "elapsed time to compute factors for microiterations $(elapsed_microseconds)"   
-        
+        # Keep byte arrays alive until C++ copies them
+        vars_dict["_serialized_bytes"] = (HVDC_bytes, incident_bytes, branches_bytes)
+
         vars_dict["serialized_factors"] = SerializedFactors(HVDC_new_dict_serialized_serialized_obj,dict_incident_factors_serialized_obj, all_monitored_branches_serialized_obj)
 
+        GC.gc(true)
         return vars_dict["serialized_factors"]
-    end 
+
+    end
 
 
 
-    Base.@ccallable function jl_clean_buffers()::Cvoid 
-        vars_dict["serialized_factors"] = nothing 
-        
-        return nothing 
-    end 
+    Base.@ccallable function jl_clean_buffers()::Cvoid
+        vars_dict["serialized_factors"] = nothing
+        vars_dict["_serialized_bytes"] = nothing
+
+        GC.gc(true)
+        return nothing
+    end
 
     
     ####################################################################################################################################
@@ -410,7 +412,7 @@ module MyLib
     ####################################################################################################################################
     #################################### START CODE NEEDED AT MICRO ITERATION  ######################################################## 
     ####################################################################################################################################
-    function get_overflows_N(v,F_N_values,N_constraints_added)
+    function get_overflows_N(v,F_N_values)
 
         #Initialize overflows dictionnaries
         dict_results_overflow_N = Dict{String, Float64}() #Branche monitorée
@@ -427,7 +429,7 @@ module MyLib
     end
 
 
-    function get_overflows_N_K( v, F_N_values)
+    function get_overflows_N_K( v, F_N_values,N_constraints_added)
 
         #Initialize overflows dictionnaries
         dict_results_overflow_N_K= Dict{Tuple{String, String}, Float64}() # (branche monitorée,incident)
@@ -491,9 +493,10 @@ module MyLib
         vars_dict["dict_incident_factors"] = deserialize_obj(serialized_factors.dict_incident_factors_serialized.bytes_ptr, serialized_factors.dict_incident_factors_serialized.bytes_length)
 
     
-        vars_dict["all_monitored_branches"] = deserialize_obj(serialized_factors.all_monitored_branches_serialized.bytes_ptr, serialized_factors.all_monitored_branches_serialized.bytes_length)        
+        vars_dict["all_monitored_branches"] = deserialize_obj(serialized_factors.all_monitored_branches_serialized.bytes_ptr, serialized_factors.all_monitored_branches_serialized.bytes_length)
 
-        return nothing 
+        GC.gc(true)
+        return nothing
     end
     
     Base.@ccallable function jl_return_constraints_for_micro_iteration(subproblem_id::Ptr{UInt8},flow_list::FlowNList)::ViolatedFlowConstraints
@@ -503,9 +506,9 @@ module MyLib
             for i in 1:flow_list.size)
 
             
-        dict_results_overflow_N = get_overflows_N(unsafe_string(subproblem_id),F_N_values,vars_dict["inc_by_sub"][unsafe_string(subproblem_id)])
+        dict_results_overflow_N = get_overflows_N(unsafe_string(subproblem_id),F_N_values)
 
-        results_overflow_N_K = get_overflows_N_K(unsafe_string(subproblem_id), F_N_values)
+        results_overflow_N_K = get_overflows_N_K(unsafe_string(subproblem_id), F_N_values,vars_dict["inc_by_sub"][unsafe_string(subproblem_id)])
 
         constraints_to_add, N_constraints_micro_it, N_K_constraints_micro_it = sort_results_and_return_constraints(dict_results_overflow_N,results_overflow_N_K)
 
@@ -513,10 +516,16 @@ module MyLib
         append!(vars_dict["inc_by_sub"][unsafe_string(subproblem_id)],N_constraints_micro_it)
         append!(vars_dict["inc_by_sub"][unsafe_string(subproblem_id)],N_K_constraints_micro_it)
 
-        c_string_constraints = [pointer(constraint) for constraint in constraints_to_add] 
+        c_string_constraints = [pointer(constraint) for constraint in constraints_to_add]
         constraints_ptr = pointer(c_string_constraints)
-        return ViolatedFlowConstraints(constraints_ptr,Cint(length(constraints_to_add))) 
-    end 
+
+        # Keep strings and pointer array alive until C++ has read them
+        vars_dict["_last_constraints_strings"] = constraints_to_add
+        vars_dict["_last_constraints_ptrs"] = c_string_constraints
+
+        GC.gc(true)
+        return ViolatedFlowConstraints(constraints_ptr,Cint(length(constraints_to_add)))
+    end
 
     
     
