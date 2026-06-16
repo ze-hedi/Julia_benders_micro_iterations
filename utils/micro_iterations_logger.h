@@ -9,7 +9,12 @@
 #include <string>
 #include <vector>
 #include <fstream>
-#include "micro_iterations_logger.h"
+#include <queue>
+#include <thread>
+#include <mutex>
+#include <condition_variable>
+#include <functional>
+#include <nlohmann/json.hpp>
 
 #include <boost/serialization/map.hpp>
 #include <boost/serialization/string.hpp>
@@ -81,11 +86,27 @@ public:
 
     void AddMicroIterCount(std::string sub_name, int num_micro_iter);
 
+    ~MicroIterationsLog();
+
+    // non-copyable, non-movable (owns a thread)
+    MicroIterationsLog(const MicroIterationsLog&) = delete;
+    MicroIterationsLog& operator=(const MicroIterationsLog&) = delete;
+
 private:
-    std::filesystem::path output_root_ ; 
+    void enqueue(std::function<void()> task);
+    void workerLoop();
+
+    std::filesystem::path output_root_ ;
     mpi::communicator* _world;
     bool warm_start_;
     std::map<std::string, std::string> sub_constraints_map_;
     std::ofstream log_file_;
     int log_level_;
+
+    // async logging
+    std::thread worker_thread_;
+    std::mutex queue_mutex_;
+    std::condition_variable queue_cv_;
+    std::queue<std::function<void()>> task_queue_;
+    bool stop_ = false;
 };
