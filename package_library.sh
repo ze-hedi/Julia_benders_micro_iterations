@@ -18,26 +18,26 @@ mkdir -p "${PACKAGE_DIR}/include"
 
 # Recompile libmyoutput.so with correct rpath for package
 echo "Recompiling micro_iters_plugin.so with package-friendly rpath..."
-g++ -shared -fPIC micro_iters.cpp micro_iterations_logger.cpp \
-    -I./libGridModelisation/include \
+g++ -shared -fPIC julia_lib/micro_iters.cpp micro_iterations_logger.cpp \
+    -I./build/julia/include \
     -I/usr/include/julia \
     -I/usr/lib/x86_64-linux-gnu/openmpi/include \
     -I/usr/lib/x86_64-linux-gnu/openmpi/include/openmpi \
-    -L./libGridModelisation/lib \
+    -L./build/julia/lib \
     -L/usr/lib/x86_64-linux-gnu/openmpi/lib \
     -lGridModelisation -ljulia \
     -lboost_mpi -lboost_serialization -lmpi_cxx -lmpi \
     -Wl,-rpath,'$ORIGIN' \
     -o "${PACKAGE_DIR}/lib/micro_iters_plugin.so"
 
-# Copy libGridModelisation dependencies
-echo "Copying libGridModelisation dependencies..."
-cp -r libGridModelisation/lib/* "${PACKAGE_DIR}/lib/"
+# Copy build/julia dependencies
+echo "Copying build/julia dependencies..."
+cp -r build/julia/lib/* "${PACKAGE_DIR}/lib/"
 
 # Copy headers if they exist
-if [ -d "libGridModelisation/include" ]; then
+if [ -d "build/julia/include" ]; then
     echo "Copying headers..."
-    cp -r libGridModelisation/include/* "${PACKAGE_DIR}/include/"
+    cp -r build/julia/include/* "${PACKAGE_DIR}/include/"
 fi
 
 # Copy MyLib.h if it exists
@@ -46,10 +46,10 @@ if [ -f "MyLib.h" ]; then
 fi
 
 # Copy artifacts directory for Julia dependencies
-if [ -d "libGridModelisation/share/julia/artifacts" ]; then
+if [ -d "build/julia/share/julia/artifacts" ]; then
     echo "Copying Julia artifacts..."
     mkdir -p "${PACKAGE_DIR}/share/julia"
-    cp -r libGridModelisation/share/julia/artifacts "${PACKAGE_DIR}/share/julia/"
+    cp -r build/julia/share/julia/artifacts "${PACKAGE_DIR}/share/julia/"
 fi
 
 # Create a usage README
@@ -63,7 +63,7 @@ This is a self-contained package with all dependencies.
 libmyoutput_package/
 ├── lib/                  # All shared libraries
 │   ├── micro_iters_plugin.so   # Main library
-│   ├── libGridModelisation.so      # MyLib dependency
+│   ├── build/julia.so      # MyLib dependency
 │   └── julia/           # Julia runtime libraries
 ├── include/             # Header files
 └── share/
@@ -107,7 +107,7 @@ g++ your_app.cpp \
 ```
 
 ## Dependencies Included
-- libGridModelisation.so
+- build/julia.so
 - Julia runtime libraries (libjulia.so, libjulia-internal.so, etc.)
 - All Julia support libraries (libgcc_s, libunwind, libz, libatomic, libstdc++, etc.)
 - Julia artifacts (binary dependencies for packages like Libiconv_jll, etc.)

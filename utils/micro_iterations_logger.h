@@ -86,6 +86,11 @@ public:
 
     void AddMicroIterCount(std::string sub_name, int num_micro_iter);
 
+    void DumpAddedConstraints(int num_micro_iter,
+                              int num_master_iter,
+                              std::string sub_name,
+                              const std::vector<std::string>& constraints_to_add);
+
     ~MicroIterationsLog();
 
     // non-copyable, non-movable (owns a thread)

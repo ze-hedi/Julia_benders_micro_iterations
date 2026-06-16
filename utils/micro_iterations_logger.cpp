@@ -109,6 +109,27 @@ void MicroIterationsLog::AddMicroIterionLog(std::string sub_name,
     });
 }
 
+void MicroIterationsLog::DumpAddedConstraints(int num_micro_iter,
+                                               int num_master_iter,
+                                               std::string sub_name,
+                                               const std::vector<std::string>& constraints_to_add)
+{
+    enqueue([this, num_micro_iter, num_master_iter,
+             sub_name = std::move(sub_name),
+             constraints_to_add] {
+        std::filesystem::path added_constraints_dir = output_root_ / "added_constraints";
+        std::string filename = "micro_iter_" + std::to_string(num_micro_iter)
+                             + "_master_" + std::to_string(num_master_iter)
+                             + "_" + sub_name + ".txt";
+        std::filesystem::path filepath = added_constraints_dir / filename;
+
+        std::ofstream out(filepath);
+        for (const auto& constraint : constraints_to_add) {
+            out << constraint << "\n";
+        }
+    });
+}
+
 void MicroIterationsLog::AddMicroIterCount(std::string sub_name, int num_micro_iter)
 {
     enqueue([this, sub_name = std::move(sub_name), num_micro_iter] {
