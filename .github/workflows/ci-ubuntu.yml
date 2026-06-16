@@ -1,0 +1,38 @@
+name: CI Ubuntu
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            cmake \
+            libopenmpi-dev \
+            libboost-mpi-dev \
+            libboost-serialization-dev \
+            libeigen3-dev \
+            nlohmann-json3-dev
+
+      - name: Configure
+        run: cmake -B build/ubuntu -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build/ubuntu
+
+      - name: Upload library
+        uses: actions/upload-artifact@v4
+        with:
+          name: cpp_plugin-ubuntu
+          path: build/ubuntu/cpp_plugin.so

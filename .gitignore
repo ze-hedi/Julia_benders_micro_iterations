@@ -21,3 +21,11 @@ test_order_output.txt
 
 # Manifest (Julia dependency lock file - typically gitignored)
 Manifest.toml
+
+# CMake build directory
+build/
+
+# Large binary data files
+*.bin
+*.jls
+*.coo

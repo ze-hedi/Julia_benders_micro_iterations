@@ -1,0 +1,47 @@
+name: CI OL8
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    container: oraclelinux:8
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          dnf install -y epel-release
+          dnf config-manager --set-enabled ol8_codeready_builder
+          dnf install -y \
+            gcc-c++ \
+            cmake \
+            make \
+            openmpi-devel \
+            boost-openmpi-devel \
+            boost-serialization \
+            eigen3-devel \
+            json-devel
+
+      - name: Configure
+        run: |
+          source /etc/profile.d/modules.sh
+          module load mpi/openmpi-x86_64
+          cmake -B build/ol8 -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: |
+          source /etc/profile.d/modules.sh
+          module load mpi/openmpi-x86_64
+          cmake --build build/ol8
+
+      - name: Upload library
+        uses: actions/upload-artifact@v4
+        with:
+          name: cpp_plugin-ol8
+          path: build/ol8/cpp_plugin.so
