@@ -118,12 +118,31 @@ void MicroIterationsLog::DumpAddedConstraints(int num_micro_iter,
              sub_name = std::move(sub_name),
              constraints_to_add] {
         std::filesystem::path added_constraints_dir = output_root_ / "added_constraints";
+        std::string clean_sub_name = sub_name;
+        auto last_slash = clean_sub_name.rfind('/');
+        if (last_slash != std::string::npos)
+            clean_sub_name = clean_sub_name.substr(last_slash + 1);
+        auto mps_pos = clean_sub_name.rfind(".mps");
+        if (mps_pos != std::string::npos)
+            clean_sub_name = clean_sub_name.substr(0, mps_pos);
+
         std::string filename = "micro_iter_" + std::to_string(num_micro_iter)
                              + "_master_" + std::to_string(num_master_iter)
-                             + "_" + sub_name + ".txt";
+                             + "_" + clean_sub_name + ".txt";
         std::filesystem::path filepath = added_constraints_dir / filename;
 
+        if (std::filesystem::exists(added_constraints_dir) ) 
+                std::cout<<"the added constraitns repo exist "<<std::endl  ;
+
+        std::cout<<"filepath "<<filepath<<std::endl ; 
+
         std::ofstream out(filepath);
+        // if (out.is_open()) 
+        // {
+        //     std::cout<<"filename "<<filename<<" is created "<<std::endl ; 
+        // }
+        // else 
+        //     std::cout<<"failed to open "<<filename<<std::endl ; 
         for (const auto& constraint : constraints_to_add) {
             out << constraint << "\n";
         }

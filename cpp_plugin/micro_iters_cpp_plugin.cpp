@@ -224,7 +224,7 @@ extern "C"
             }
         }
 
-        micro_iterations_logger->DumpAddedConstraints(num_micro_iter, num_master_iter, sub_name, constraints_to_add_vec);
+        micro_iterations_logger->DumpAddedConstraints(num_micro_iter, num_master_iter, sub_name, added_constraints_families_per_sub[sub_name]);
         micro_iterations_logger->AddMicroIterionLog(sub_name, num_micro_iter, num_master_iter, solving_time, constraints_to_add_vec);
 
     }
