@@ -13,6 +13,11 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
 find_package(MPI REQUIRED)
 find_package(Boost 1.66 REQUIRED COMPONENTS mpi serialization)
 find_package(Eigen3 REQUIRED)
+if(NOT TARGET Eigen3::Eigen)
+    add_library(Eigen3::Eigen INTERFACE IMPORTED)
+    set_target_properties(Eigen3::Eigen PROPERTIES
+        INTERFACE_INCLUDE_DIRECTORIES "${EIGEN3_INCLUDE_DIR}")
+endif()
 find_package(nlohmann_json REQUIRED)
 
 add_subdirectory(utils)
