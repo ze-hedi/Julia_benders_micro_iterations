@@ -22,8 +22,8 @@ jobs:
             gcc-toolset-13 \
             cmake \
             make \
-            openmpi-devel \
-            boost-openmpi-devel \
+            openmpi4-devel \
+            boost-openmpi4-devel \
             boost-serialization \
             eigen3-devel \
             json-devel
@@ -32,14 +32,14 @@ jobs:
         run: |
           source /opt/rh/gcc-toolset-13/enable
           source /etc/profile.d/modules.sh
-          module load mpi/openmpi-x86_64
+          module load mpi/openmpi4-x86_64
           cmake -B build/ol8 -DCMAKE_BUILD_TYPE=Release
 
       - name: Build
         run: |
           source /opt/rh/gcc-toolset-13/enable
           source /etc/profile.d/modules.sh
-          module load mpi/openmpi-x86_64
+          module load mpi/openmpi4-x86_64
           cmake --build build/ol8
 
       - name: Package artifact
