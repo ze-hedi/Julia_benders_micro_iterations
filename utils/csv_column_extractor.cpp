@@ -23,8 +23,6 @@ CSVData read_csv_to_map(const std::filesystem::path& csv_path)
         exit(EXIT_FAILURE);
     }
     
-    std::cout << "Reading CSV file: " << csv_path << std::endl;
-    
     std::string row;
     typedef boost::tokenizer<boost::escaped_list_separator<char>> Tokenizer;
     
@@ -41,8 +39,6 @@ CSVData read_csv_to_map(const std::filesystem::path& csv_path)
     }
     
     csv_file.close();
-    std::cout << "Successfully read " << data.rows.size() << " rows" << std::endl;
-    
     return data;
 }
 
@@ -57,15 +53,12 @@ void write_second_column_to_file(const CSVData& data,
         exit(EXIT_FAILURE);
     }
     
-    std::cout << "Writing second column to: " << output_path << std::endl;
-    
     for (const auto& [col1, col2] : data.rows)
     {
         output_file << col2 << std::endl;
     }
     
     output_file.close();
-    std::cout << "Successfully wrote " << data.rows.size() << " values to output file" << std::endl;
 }
 
 int main(int argc, char* argv[])
@@ -93,8 +86,6 @@ int main(int argc, char* argv[])
     
     // Write second column to output file
     write_second_column_to_file(csv_data, output_path);
-    
-    std::cout << "\nDone! Output file created: " << output_path << std::endl;
     
     return EXIT_SUCCESS;
 }

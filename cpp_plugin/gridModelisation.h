@@ -173,28 +173,21 @@ class Plugin
 {
 
     public :
-    Plugin(std::string data_path, mpi::communicator* world)  {
+    Plugin(mpi::communicator* world)  {
 
-        data_path = "./plugin_inputs/cpp_structures" ; 
-        std::cout<<"entered in plugin constructor "<<std::endl ; 
-        world_ = world ; 
-        B_inv_ = load_dense_named(data_path + "/B_inv") ;
-        std::cout<<"B_inv is good" <<std::endl ; 
-        std::cout<<"path of AB "<<data_path + "/Ab"<<std::endl; 
-        Ab_  = load_sparse_named<std::string,std::string>(data_path + "/Ab") ;
-        std::cout<<"Ab_ is good "<<std::endl ; 
-        Yl_ =  load_sparse_named<std::string,std::string>(data_path+"/Yl") ;
-        std::cout<<"Yl_ is good "<<std::endl ; 
-        A_hvdc_ = load_sparse_named<std::string,std::string>(data_path+"/A_hvdc") ;
-        std::cout<<"A_hvdc_ is good "<<std::endl ; 
-        branches_dict_ = load_dict(data_path + "/branches_to_candidates_dict.json") ;
-        n_side1_dict_ = load_dict<std::string,int>(data_path + "/n_side1_dict.json" ) ;
-        n_side2_dict_ = load_dict<std::string,int>(data_path + "/n_side2_dict.json") ;
-        max_flows_N_K_ = load_pair_keyed_dict(data_path + "/max_flows_N_K.json") ;
-        max_flows_N_ = load_pair_keyed_dict(data_path + "/max_flows_N.json") ;
-        dict_incident_outage_AC_branches_ = load_dict_of_vectors(data_path + "/dict_incident_outage_AC_branches.json") ;
-        dict_incident_HVDC_branches_ = load_dict_of_vectors(data_path + "/dict_incident_HVDC_branches.json") ;
-        std::cout<<"end of plugin "<<std::endl ; 
+        data_path_ = "./plugin_inputs/cpp_structures" ;
+        world_ = world ;
+        B_inv_ = load_dense_named(data_path_ + "/B_inv") ;
+        Ab_  = load_sparse_named<std::string,std::string>(data_path_ + "/Ab") ;
+        Yl_ =  load_sparse_named<std::string,std::string>(data_path_+"/Yl") ;
+        A_hvdc_ = load_sparse_named<std::string,std::string>(data_path_+"/A_hvdc") ;
+        branches_dict_ = load_dict(data_path_ + "/branches_to_candidates_dict.json") ;
+        n_side1_dict_ = load_dict<std::string,int>(data_path_ + "/n_side1_dict.json" ) ;
+        n_side2_dict_ = load_dict<std::string,int>(data_path_ + "/n_side2_dict.json") ;
+        max_flows_N_K_ = load_pair_keyed_dict(data_path_ + "/max_flows_N_K.json") ;
+        max_flows_N_ = load_pair_keyed_dict(data_path_ + "/max_flows_N.json") ;
+        dict_incident_outage_AC_branches_ = load_dict_of_vectors(data_path_ + "/dict_incident_outage_AC_branches.json") ;
+        dict_incident_HVDC_branches_ = load_dict_of_vectors(data_path_ + "/dict_incident_HVDC_branches.json") ;
     }
 
     void get_invested_branches(const std::map<std::string,int>& z_dict, std::vector<std::string>& invested_branches,
