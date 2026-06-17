@@ -22,6 +22,7 @@ jobs:
             gcc-toolset-13 \
             cmake \
             make \
+            git \
             openmpi-devel \
             boost-openmpi-devel \
             boost-serialization \
