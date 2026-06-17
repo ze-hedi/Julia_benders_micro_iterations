@@ -29,3 +29,7 @@ build/
 *.bin
 *.jls
 *.coo
+
+# But keep test data files
+!tests/unit_tests/test_utils/**/*.bin
+!tests/unit_tests/test_utils/**/*.coo
