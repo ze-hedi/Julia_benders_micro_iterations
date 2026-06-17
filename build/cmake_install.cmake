@@ -46,6 +46,7 @@ if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for each subdirectory.
   include("/home/bouchehdahed/code/Julia_benders_micro_iterations/build/utils/cmake_install.cmake")
   include("/home/bouchehdahed/code/Julia_benders_micro_iterations/build/cpp_plugin/cmake_install.cmake")
+  include("/home/bouchehdahed/code/Julia_benders_micro_iterations/build/tests/cmake_install.cmake")
 
 endif()
 
