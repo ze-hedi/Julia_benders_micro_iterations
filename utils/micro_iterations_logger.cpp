@@ -39,6 +39,13 @@ MicroIterationsLog::MicroIterationsLog(
         {
             std::filesystem::create_directories(added_constraints_repo_path);
         }
+        else
+        {
+            for (const auto& entry : std::filesystem::directory_iterator(added_constraints_repo_path))
+            {
+                std::filesystem::remove(entry.path());
+            }
+        }
     }
 
     // Start the background worker thread
