@@ -48,6 +48,8 @@ jobs:
           source /opt/rh/gcc-toolset-13/enable
           source /etc/profile.d/modules.sh
           module load mpi/openmpi-x86_64
+          export OMPI_ALLOW_RUN_AS_ROOT=1
+          export OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1
           ctest --test-dir build/ol8 --output-on-failure
 
       - name: Package artifact
