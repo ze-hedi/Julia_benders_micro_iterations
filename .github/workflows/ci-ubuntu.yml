@@ -26,10 +26,13 @@ jobs:
             nlohmann-json3-dev
 
       - name: Configure
-        run: cmake -B build/ubuntu -DCMAKE_BUILD_TYPE=Release
+        run: cmake -B build/ubuntu -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON
 
       - name: Build
         run: cmake --build build/ubuntu
+
+      - name: Run tests
+        run: ctest --test-dir build/ubuntu --output-on-failure
 
       - name: Package artifact
         run: tar -czf cpp_plugin-ubuntu.tar.gz -C build/ubuntu/cpp_plugin/ cpp_plugin.so

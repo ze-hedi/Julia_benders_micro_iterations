@@ -33,7 +33,7 @@ jobs:
           source /opt/rh/gcc-toolset-13/enable
           source /etc/profile.d/modules.sh
           module load mpi/openmpi-x86_64
-          cmake -B build/ol8 -DCMAKE_BUILD_TYPE=Release
+          cmake -B build/ol8 -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON
 
       - name: Build
         run: |
@@ -41,6 +41,13 @@ jobs:
           source /etc/profile.d/modules.sh
           module load mpi/openmpi-x86_64
           cmake --build build/ol8
+
+      - name: Run tests
+        run: |
+          source /opt/rh/gcc-toolset-13/enable
+          source /etc/profile.d/modules.sh
+          module load mpi/openmpi-x86_64
+          ctest --test-dir build/ol8 --output-on-failure
 
       - name: Package artifact
         run: tar -czf cpp_plugin-ol8.tar.gz -C build/ol8/cpp_plugin/ cpp_plugin.so
