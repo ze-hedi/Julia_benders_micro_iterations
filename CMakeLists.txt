@@ -22,3 +22,9 @@ find_package(nlohmann_json REQUIRED)
 
 add_subdirectory(utils)
 add_subdirectory(cpp_plugin)
+
+option(BUILD_TESTS "Build unit tests" OFF)
+if(BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(tests)
+endif()
