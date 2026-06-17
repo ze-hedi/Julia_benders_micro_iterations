@@ -286,7 +286,6 @@ void  OnBendersMasterResolutionEnd(
 {
 
     auto binary_variables_ids_map = get_binary_variables_ids_map(input_root) ;
-    std::cout<<"binary_variables_ids_map "<<binary_variables_ids_map.size()<<std::endl ;
 
     // 
     // t<<"binary_variables_ids_map size "<<binary_variables_ids_map.size()<<std::endl ; 
@@ -308,10 +307,6 @@ void  OnBendersMasterResolutionEnd(
       master_out.size()};
 
 
-    for (auto candidate : candidates_iter_res)
-    {
-      std::cout<<"line "<<candidate.candidate_line_id<<" "<<candidate.is_invested<<std::endl ;
-    }
 
     auto t1 = std::chrono::high_resolution_clock::now();
     // SerializedFactors_mpi serialized_factors_mpi ;

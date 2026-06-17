@@ -39,10 +39,6 @@ MicroIterationsLog::MicroIterationsLog(
         {
             std::filesystem::create_directories(added_constraints_repo_path);
         }
-        else
-        {
-            std::cout << "added constraints folder already exist  !!!" << std::endl;
-        }
     }
 
     // Start the background worker thread
@@ -131,18 +127,7 @@ void MicroIterationsLog::DumpAddedConstraints(int num_micro_iter,
                              + "_" + clean_sub_name + ".txt";
         std::filesystem::path filepath = added_constraints_dir / filename;
 
-        if (std::filesystem::exists(added_constraints_dir) ) 
-                std::cout<<"the added constraitns repo exist "<<std::endl  ;
-
-        std::cout<<"filepath "<<filepath<<std::endl ; 
-
         std::ofstream out(filepath);
-        // if (out.is_open()) 
-        // {
-        //     std::cout<<"filename "<<filename<<" is created "<<std::endl ; 
-        // }
-        // else 
-        //     std::cout<<"failed to open "<<filename<<std::endl ; 
         for (const auto& constraint : constraints_to_add) {
             out << constraint << "\n";
         }
