@@ -31,8 +31,11 @@ jobs:
       - name: Build
         run: cmake --build build/ubuntu
 
+      - name: Package artifact
+        run: tar -czf cpp_plugin-ubuntu.tar.gz -C build/ubuntu/cpp_plugin/ cpp_plugin.so
+
       - name: Upload library
         uses: actions/upload-artifact@v4
         with:
           name: cpp_plugin-ubuntu
-          path: build/ubuntu/cpp_plugin.so
+          path: cpp_plugin-ubuntu.tar.gz
