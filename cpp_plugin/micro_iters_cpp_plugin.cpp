@@ -79,7 +79,7 @@ std::map<std::string, std::string> read_variables_dictionary(
 
 std::shared_ptr<Plugin> get_plugin( mpi::communicator* world = nullptr)
 {
-    static auto gridModelisation_plugin = std::make_shared<Plugin>(world) ;
+    static auto gridModelisation_plugin = std::make_shared<Plugin>("./plugin_inputs/cpp_structures", world) ;
     return gridModelisation_plugin ;
 }
 
@@ -159,43 +159,6 @@ bool check_if_constraints_family_added(std::string sub_name,const char* violated
 
 
 
-void write_sub_solution(const std::filesystem::path& filepath,
-                        const std::string& sub_name,
-                        const std::map<std::string, double>& values)
-{
-    std::ofstream out(filepath);
-    if (!sub_name.empty())
-    {
-        out << sub_name << "\n";
-    }
-    for (const auto& [key, value] : values)
-    {
-        out << key << " : " << value << "\n";
-    }
-}
-
-std::pair<std::string, std::map<std::string, double>> read_sub_solution(
-    const std::filesystem::path& filepath)
-{
-    std::ifstream in(filepath);
-    std::string sub_name;
-    std::getline(in, sub_name);
-
-    std::map<std::string, double> values;
-    std::string line;
-    while (std::getline(in, line))
-    {
-        auto sep = line.find(" : ");
-        if (sep != std::string::npos)
-        {
-            std::string key = line.substr(0, sep);
-            double val = std::stod(line.substr(sep + 3));
-            values[key] = val;
-        }
-    }
-    return {sub_name, values};
-}
-
 extern "C"
 {
     void OnBendersStart(std::vector<std::string> sub_problems, int rank, 
@@ -251,7 +214,6 @@ extern "C"
         {
             F_N_values[variables_dict.at(variables_names_vector[i])] = sub_solution[variables_indices_vector[i]] ;
         }
-        write_sub_solution("./constraints_for_micro_iterations.txt", sub_name, F_N_values);
         auto constraints_families = plugin->return_constraints_for_micro_iteration(sub_name, F_N_values);
         for (const auto& constraint_family : constraints_families)
         {
@@ -289,8 +251,6 @@ extern "C"
                     z_dict[var_id] = static_cast<int>(master_out[var_name]);
                 }
             }
-            std::map<std::string, double> z_dict_double(z_dict.begin(), z_dict.end());
-            write_sub_solution("./constraints_for_micro_iterations.txt", "", z_dict_double);
             auto chrono_start = std::chrono::high_resolution_clock::now();
             plugin->compute_factors_for_micro_iterations(z_dict) ;
             auto chrono_end = std::chrono::high_resolution_clock::now();

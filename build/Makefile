@@ -249,6 +249,19 @@ test_micro_iterations_logger/fast:
 	$(MAKE) $(MAKESILENT) -f tests/unit_tests/CMakeFiles/test_micro_iterations_logger.dir/build.make tests/unit_tests/CMakeFiles/test_micro_iterations_logger.dir/build
 .PHONY : test_micro_iterations_logger/fast
 
+#=============================================================================
+# Target rules for targets named test_plugin
+
+# Build rule for target.
+test_plugin: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test_plugin
+.PHONY : test_plugin
+
+# fast build rule for target.
+test_plugin/fast:
+	$(MAKE) $(MAKESILENT) -f tests/unit_tests/CMakeFiles/test_plugin.dir/build.make tests/unit_tests/CMakeFiles/test_plugin.dir/build
+.PHONY : test_plugin/fast
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -268,6 +281,7 @@ help:
 	@echo "... gtest"
 	@echo "... gtest_main"
 	@echo "... test_micro_iterations_logger"
+	@echo "... test_plugin"
 .PHONY : help
 
 

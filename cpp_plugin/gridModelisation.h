@@ -173,9 +173,9 @@ class Plugin
 {
 
     public :
-    Plugin(mpi::communicator* world)  {
+    Plugin(std::string data_path, mpi::communicator* world)  {
 
-        data_path_ = "./plugin_inputs/cpp_structures" ;
+        data_path_ = data_path ;
         world_ = world ;
         B_inv_ = load_dense_named(data_path_ + "/B_inv") ;
         Ab_  = load_sparse_named<std::string,std::string>(data_path_ + "/Ab") ;

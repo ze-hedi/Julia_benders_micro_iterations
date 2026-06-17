@@ -169,6 +169,7 @@ tests/clean: tests/unit_tests/clean
 
 # Recursive "all" directory target.
 tests/unit_tests/all: tests/unit_tests/CMakeFiles/test_micro_iterations_logger.dir/all
+tests/unit_tests/all: tests/unit_tests/CMakeFiles/test_plugin.dir/all
 .PHONY : tests/unit_tests/all
 
 # Recursive "preinstall" directory target.
@@ -177,6 +178,7 @@ tests/unit_tests/preinstall:
 
 # Recursive "clean" directory target.
 tests/unit_tests/clean: tests/unit_tests/CMakeFiles/test_micro_iterations_logger.dir/clean
+tests/unit_tests/clean: tests/unit_tests/CMakeFiles/test_plugin.dir/clean
 .PHONY : tests/unit_tests/clean
 
 #=============================================================================
@@ -350,6 +352,32 @@ test_micro_iterations_logger: tests/unit_tests/CMakeFiles/test_micro_iterations_
 tests/unit_tests/CMakeFiles/test_micro_iterations_logger.dir/clean:
 	$(MAKE) $(MAKESILENT) -f tests/unit_tests/CMakeFiles/test_micro_iterations_logger.dir/build.make tests/unit_tests/CMakeFiles/test_micro_iterations_logger.dir/clean
 .PHONY : tests/unit_tests/CMakeFiles/test_micro_iterations_logger.dir/clean
+
+#=============================================================================
+# Target rules for target tests/unit_tests/CMakeFiles/test_plugin.dir
+
+# All Build rule for target.
+tests/unit_tests/CMakeFiles/test_plugin.dir/all: _deps/googletest-build/googletest/CMakeFiles/gtest.dir/all
+	$(MAKE) $(MAKESILENT) -f tests/unit_tests/CMakeFiles/test_plugin.dir/build.make tests/unit_tests/CMakeFiles/test_plugin.dir/depend
+	$(MAKE) $(MAKESILENT) -f tests/unit_tests/CMakeFiles/test_plugin.dir/build.make tests/unit_tests/CMakeFiles/test_plugin.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/bouchehdahed/code/Julia_benders_micro_iterations/build/CMakeFiles --progress-num=15,16,17 "Built target test_plugin"
+.PHONY : tests/unit_tests/CMakeFiles/test_plugin.dir/all
+
+# Build rule for subdir invocation for target.
+tests/unit_tests/CMakeFiles/test_plugin.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/bouchehdahed/code/Julia_benders_micro_iterations/build/CMakeFiles 5
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 tests/unit_tests/CMakeFiles/test_plugin.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/bouchehdahed/code/Julia_benders_micro_iterations/build/CMakeFiles 0
+.PHONY : tests/unit_tests/CMakeFiles/test_plugin.dir/rule
+
+# Convenience name for target.
+test_plugin: tests/unit_tests/CMakeFiles/test_plugin.dir/rule
+.PHONY : test_plugin
+
+# clean rule for target.
+tests/unit_tests/CMakeFiles/test_plugin.dir/clean:
+	$(MAKE) $(MAKESILENT) -f tests/unit_tests/CMakeFiles/test_plugin.dir/build.make tests/unit_tests/CMakeFiles/test_plugin.dir/clean
+.PHONY : tests/unit_tests/CMakeFiles/test_plugin.dir/clean
 
 #=============================================================================
 # Special targets to cleanup operation of make.
