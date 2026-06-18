@@ -111,7 +111,6 @@ load_dense_named(const std::string& prefix) {
     // Read binary blob
     std::ifstream f(prefix + ".bin", std::ios::binary);
 
-
     int64_t rows, cols;
     f.read(reinterpret_cast<char*>(&rows), 8);
     f.read(reinterpret_cast<char*>(&cols), 8);
@@ -120,7 +119,7 @@ load_dense_named(const std::string& prefix) {
     // Julia is column-major, Eigen default is column-major → direct copy
     nm.mat.resize(rows, cols);
     f.read(reinterpret_cast<char*>(nm.mat.data()), rows * cols * sizeof(double));
-
+    
     nm.row_index = load_names<int>( prefix + "_rownames.json");
     nm.col_index = load_names<int>( prefix + "_colnames.json");
     return nm;
