@@ -19,7 +19,7 @@ jobs:
           dnf install -y epel-release
           dnf config-manager --set-enabled ol8_codeready_builder
           dnf install -y \
-            gcc-toolset-13 \
+            gcc-toolset-11 \
             cmake \
             make \
             git \
@@ -31,21 +31,21 @@ jobs:
 
       - name: Configure
         run: |
-          source /opt/rh/gcc-toolset-13/enable
+          source /opt/rh/gcc-toolset-11/enable
           source /etc/profile.d/modules.sh
           module load mpi/openmpi-x86_64
           cmake -B build/ol8 -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON
 
       - name: Build
         run: |
-          source /opt/rh/gcc-toolset-13/enable
+          source /opt/rh/gcc-toolset-11/enable
           source /etc/profile.d/modules.sh
           module load mpi/openmpi-x86_64
           cmake --build build/ol8
 
       - name: Run tests
         run: |
-          source /opt/rh/gcc-toolset-13/enable
+          source /opt/rh/gcc-toolset-11/enable
           source /etc/profile.d/modules.sh
           module load mpi/openmpi-x86_64
           export OMPI_ALLOW_RUN_AS_ROOT=1
