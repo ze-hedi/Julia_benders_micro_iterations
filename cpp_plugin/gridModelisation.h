@@ -641,8 +641,8 @@ class Plugin
     return_constraints_for_micro_iteration(
         const std::string& sub_problem ,
         const std::map<std::string, double>& F_N_values,
-        double tol_N=1e-5,
-        double tol_N_K=1e-5,
+        double tol_N=1.001,
+        double tol_N_K=1,
         int max_constraints_per_micro_it = 200,
         bool add_N_constraint_first=false)
     {
