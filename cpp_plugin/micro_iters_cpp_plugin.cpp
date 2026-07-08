@@ -79,7 +79,7 @@ std::map<std::string, std::string> read_variables_dictionary(
 
 std::shared_ptr<Plugin> get_plugin( mpi::communicator* world = nullptr)
 {
-    static auto gridModelisation_plugin = std::make_shared<Plugin>("./plugin_inputs/inputs_micro_it", world) ;
+    static auto gridModelisation_plugin = std::make_shared<Plugin>("./plugin_inputs/inputs_micro_it", world, "./micro_iterations_config.txt") ;
     return gridModelisation_plugin ;
 }
 

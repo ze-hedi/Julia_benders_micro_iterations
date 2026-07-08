@@ -172,10 +172,32 @@ class Plugin
 {
 
     public :
-    Plugin(std::string data_path, mpi::communicator* world)  {
+    Plugin(std::string data_path, mpi::communicator* world, const std::string config_path)  {
 
         data_path_ = data_path ;
         world_ = world ;
+
+        std::ifstream config_file(config_path) ;
+        if (!config_file.is_open()) {
+            throw std::runtime_error("Cannot open config file: " + config_path) ;
+        }
+        std::string line ;
+        while (std::getline(config_file, line)) {
+            if (line.empty()) continue ;
+            auto pos = line.find('=') ;
+            if (pos == std::string::npos) continue ;
+            std::string key = line.substr(0, pos) ;
+            std::string value = line.substr(pos + 1) ;
+            if (key == "max_constraints_per_micro_it") {
+                max_constraints_per_micro_it_ = std::stoi(value) ;
+            } else if (key == "add_N_constraint_first") {
+                add_N_constraint_first_ = (value == "true" || value == "1") ;
+            } else if (key == "tol_N") {
+                tol_N_ = std::stod(value) ;
+            } else if (key == "tol_N_K") {
+                tol_N_K_ = std::stod(value) ;
+            }
+        }
         B_inv_ = load_dense_named(data_path_ + "/B_inv") ;
         Ab_  = load_sparse_named<std::string,std::string>(data_path_ + "/Ab") ;
         Yl_ =  load_sparse_named<std::string,std::string>(data_path_+"/Yl") ;
@@ -497,12 +519,12 @@ class Plugin
         HVDC_new_dict_ = helper_convert_sensitivity_array_to_dict(HVDC_filtered) ;
 
         // Compute incident factors
-        dict_incident_factors_ = compute_incident_factors_after_lines_removal(all_monitored_branches_, invested_branches, PTDF_new) ;  
+        dict_incident_factors_ = compute_incident_factors_after_lines_removal(all_monitored_branches_, invested_branches, PTDF_new) ;
     }
 
 
 
-    void broadcast_factors() 
+    void broadcast_factors()
     {
         mpi::broadcast(*world_,dict_incident_factors_,0) ; 
         mpi::broadcast(*world_,HVDC_new_dict_,0) ; 
@@ -585,13 +607,12 @@ class Plugin
         return dict_results_overflow_N_K ;
     }
 
-
+    //max_constraints_per_micro_it to set in micro_iteration_config 
+    //add_N_constraint_first to set in micro 
     std::vector<std::string>
     sort_results_and_return_constraints(
         const std::map<std::string, double>& dict_results_overflow_N,
-        const std::map<std::pair<std::string,std::string>, double>& dict_results_overflow_N_K,
-        int max_constraints_per_micro_it,
-        bool add_N_constraint_first)
+        const std::map<std::pair<std::string,std::string>, double>& dict_results_overflow_N_K)
     {
         std::vector<std::string> constraints_to_add ;
         std::vector<std::string> N_constraints_micro_it ;
@@ -605,7 +626,7 @@ class Plugin
 
         // Add N constraints
         for (const auto& [monitored, val] : dict_results_overflow_N) {
-            if ((int)(N_constraints_micro_it.size() + N_K_constraints_micro_it.size()) >= max_constraints_per_micro_it)
+            if ((int)(N_constraints_micro_it.size() + N_K_constraints_micro_it.size()) >= max_constraints_per_micro_it_)
                 break ;
             constraints_to_add.push_back("branch_" + monitored) ;
             N_constraints_micro_it.push_back(monitored) ;
@@ -613,7 +634,7 @@ class Plugin
 
         // Add N-K constraints
         for (const auto& [key, val] : sorted_results_overflow_N_K) {
-            if ((int)(N_constraints_micro_it.size() + N_K_constraints_micro_it.size()) >= max_constraints_per_micro_it)
+            if ((int)(N_constraints_micro_it.size() + N_K_constraints_micro_it.size()) >= max_constraints_per_micro_it_)
                 break ;
             const auto& monitored = key.first ;
             const auto& incident = key.second ;
@@ -623,37 +644,34 @@ class Plugin
             if (!already_in_N_K) {
                 bool in_N = std::find(N_constraints_micro_it.begin(), N_constraints_micro_it.end(), monitored)
                                 != N_constraints_micro_it.end() ;
-                if (!(add_N_constraint_first && in_N)) {
+                if (!(add_N_constraint_first_ && in_N)) {
                     constraints_to_add.push_back("branch_" + monitored + "_inc_" + incident) ;
                     constraints_to_add.push_back("inc_" + incident) ;
                     N_K_constraints_micro_it.push_back(monitored) ;
                 }
             }
         }
-
+        std::cout<<"constraints to add size "<<constraints_to_add.size()<<std::endl; 
         return constraints_to_add ;
     }
 
 
-
+    //tol_N to set in micro config 
+    //tol_N_K to set in micro config 
     //to do here 
     std::vector<std::string>
     return_constraints_for_micro_iteration(
         const std::string& sub_problem ,
-        const std::map<std::string, double>& F_N_values,
-        double tol_N=1.001,
-        double tol_N_K=1,
-        int max_constraints_per_micro_it = 200,
-        bool add_N_constraint_first=false)
+        const std::map<std::string, double>& F_N_values)
     {
-        auto dict_results_overflow_N = get_overflows_N(max_flows_N_, all_monitored_branches_, sub_problem, F_N_values, tol_N) ;
+        auto dict_results_overflow_N = get_overflows_N(max_flows_N_, all_monitored_branches_, sub_problem, F_N_values, tol_N_) ;
 
         auto dict_results_overflow_N_K = get_overflows_N_K(max_flows_N_K_, all_monitored_branches_,
             dict_incident_outage_AC_branches_, dict_incident_HVDC_branches_,
-            dict_incident_factors_, HVDC_new_dict_, sub_problem, F_N_values, tol_N_K) ;
+            dict_incident_factors_, HVDC_new_dict_, sub_problem, F_N_values, tol_N_K_) ;
 
-        return sort_results_and_return_constraints(dict_results_overflow_N, dict_results_overflow_N_K,
-            max_constraints_per_micro_it, add_N_constraint_first) ;
+        auto result = sort_results_and_return_constraints(dict_results_overflow_N, dict_results_overflow_N_K) ;
+        return result ;
     }
 
 
@@ -678,5 +696,9 @@ class Plugin
     std::map<std::string, std::vector<std::string>> dict_incident_HVDC_branches_ ;
     std::vector<std::string> all_monitored_branches_ ; 
     std::map<std::pair<std::string,std::string>,double> HVDC_new_dict_  ; 
-    std::map<std::tuple<std::string,std::string,std::string>, double> dict_incident_factors_  ;  
+    std::map<std::tuple<std::string,std::string,std::string>, double> dict_incident_factors_  ;
+    int max_constraints_per_micro_it_ = 200 ;
+    bool add_N_constraint_first_ = false ;
+    double tol_N_ = 1.001 ;
+    double tol_N_K_ = 1.0 ;
 } ;
