@@ -242,6 +242,8 @@ extern "C"
                 std::filesystem::path input_root)
 
     {
+        
+        long long elapsed_ms = 0;
         auto plugin = get_plugin() ;
         if (world->rank() == 0) {
             auto binary_vars_map = get_binary_variables_ids_map(input_root);
@@ -252,11 +254,14 @@ extern "C"
                 }
             }
             auto chrono_start = std::chrono::high_resolution_clock::now();
+            std::cout<<"start computing factors "<<std::endl ;
             plugin->compute_factors_for_micro_iterations(z_dict) ;
+            std::cout<<"ended computing factors "<<std::endl ;
             auto chrono_end = std::chrono::high_resolution_clock::now();
-            auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(chrono_end - chrono_start).count();
-            micro_iterations_logger->AddMasterIterationLog(num_iter, std::to_string(elapsed_ms));
+            elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(chrono_end - chrono_start).count();
         }
+        mpi::broadcast(*world, elapsed_ms, 0);
+        micro_iterations_logger->AddMasterIterationLog(num_iter, std::to_string(elapsed_ms));
         plugin->broadcast_factors() ; 
     }
 

@@ -246,6 +246,7 @@ class Plugin
 
         Eigen::MatrixXd I = Eigen::MatrixXd::Identity(k, k) ;
         Eigen::MatrixXd BinvA = B_inv_.mat * A_k ;
+
         Eigen::MatrixXd M = I - A_k.transpose() * BinvA ;
         Eigen::MatrixXd M_inv = M.inverse() ;
 
@@ -493,7 +494,6 @@ class Plugin
 
         NamedMatrix<Eigen::MatrixXd,std::string,int> PTDF_new ;
         NamedMatrix<Eigen::MatrixXd,std::string,std::string> HVDC_sensitivity_matrix_new ;
-
         compute_sensis_after_lines_removal(non_invested_branches,PTDF_new,HVDC_sensitivity_matrix_new) ;
 
         // Union of all_monitored_branches and branches_with_incidents, deduplicated
@@ -651,7 +651,6 @@ class Plugin
                 }
             }
         }
-        std::cout<<"constraints to add size "<<constraints_to_add.size()<<std::endl; 
         return constraints_to_add ;
     }
 
