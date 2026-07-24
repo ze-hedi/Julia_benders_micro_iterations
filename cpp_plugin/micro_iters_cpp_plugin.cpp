@@ -215,6 +215,7 @@ extern "C"
             F_N_values[variables_dict.at(variables_names_vector[i])] = sub_solution[variables_indices_vector[i]] ;
         }
         auto constraints_families = plugin->return_constraints_for_micro_iteration(sub_name, F_N_values);
+        auto size_before = added_constraints_families_per_sub[sub_name].size();
         for (const auto& constraint_family : constraints_families)
         {
             if (!check_if_constraints_family_added(sub_name, constraint_family.c_str()))
@@ -223,8 +224,9 @@ extern "C"
                 constraints_to_add_vec.insert(constraints_to_add_vec.end(), constraints_dict[constraint_family].begin(), constraints_dict[constraint_family].end()) ;
             }
         }
+        auto size_after = added_constraints_families_per_sub[sub_name].size();
 
-        micro_iterations_logger->DumpAddedConstraints(num_micro_iter, num_master_iter, sub_name, added_constraints_families_per_sub[sub_name]);
+        micro_iterations_logger->DumpAddedConstraints(num_micro_iter, num_master_iter, sub_name, added_constraints_families_per_sub[sub_name], size_before, size_after);
         micro_iterations_logger->AddMicroIterionLog(sub_name, num_micro_iter, num_master_iter, solving_time, constraints_to_add_vec);
 
     }

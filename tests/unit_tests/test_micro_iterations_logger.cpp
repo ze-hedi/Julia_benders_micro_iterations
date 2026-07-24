@@ -147,7 +147,7 @@ TEST_F(MicroIterationsLogTest, DumpAddedConstraintsCreatesFile)
     {
         MicroIterationsLog logger(tmp_dir, false, g_world, 0);
         std::vector<std::string> constraints = {"constraint_A", "constraint_B", "constraint_C"};
-        logger.DumpAddedConstraints(0, 1, "path/to/area1.mps", constraints);
+        logger.DumpAddedConstraints(0, 1, "path/to/area1.mps", constraints, 0, constraints.size());
     }
 
     if (g_world->rank() == 0)
@@ -170,9 +170,9 @@ TEST_F(MicroIterationsLogTest, DumpAddedConstraintsMultipleMicroIterations)
 {
     {
         MicroIterationsLog logger(tmp_dir, false, g_world, 0);
-        logger.DumpAddedConstraints(0, 1, "sub1.mps", {"c1", "c2"});
-        logger.DumpAddedConstraints(1, 1, "sub1.mps", {"c3"});
-        logger.DumpAddedConstraints(0, 2, "sub1.mps", {"c4", "c5"});
+        logger.DumpAddedConstraints(0, 1, "sub1.mps", {"c1", "c2"}, 0, 2);
+        logger.DumpAddedConstraints(1, 1, "sub1.mps", {"c3"}, 0, 1);
+        logger.DumpAddedConstraints(0, 2, "sub1.mps", {"c4", "c5"}, 0, 2);
     }
 
     if (g_world->rank() == 0)

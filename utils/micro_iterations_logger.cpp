@@ -115,11 +115,13 @@ void MicroIterationsLog::AddMicroIterionLog(std::string sub_name,
 void MicroIterationsLog::DumpAddedConstraints(int num_micro_iter,
                                                int num_master_iter,
                                                std::string sub_name,
-                                               const std::vector<std::string>& constraints_to_add)
+                                               const std::vector<std::string>& constraints_to_add,
+                                               size_t start,
+                                               size_t end)
 {
     enqueue([this, num_micro_iter, num_master_iter,
              sub_name = std::move(sub_name),
-             constraints_to_add] {
+             constraints_to_add, start, end] {
         std::filesystem::path added_constraints_dir = output_root_ / "added_constraints";
         std::string clean_sub_name = sub_name;
         auto last_slash = clean_sub_name.rfind('/');
@@ -135,8 +137,8 @@ void MicroIterationsLog::DumpAddedConstraints(int num_micro_iter,
         std::filesystem::path filepath = added_constraints_dir / filename;
 
         std::ofstream out(filepath);
-        for (const auto& constraint : constraints_to_add) {
-            out << constraint << "\n";
+        for (size_t i = start; i < end; ++i) {
+            out << constraints_to_add[i] << "\n";
         }
     });
 }
