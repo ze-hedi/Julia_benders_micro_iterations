@@ -110,8 +110,8 @@ TEST_F(MicroIterationsLogTest, AddMicroIterationLog)
 {
     {
         MicroIterationsLog logger(tmp_dir, false, g_world, 0);
-        logger.AddMicroIterionLog("area1.mps", 0, 1, "10.5", {"key1", "key2"});
-        logger.AddMicroIterionLog("area2.mps", 1, 1, "20.3", {});
+        logger.AddMicroIterionLog("area1.mps", 0, 1, "10.5", {"key1", "key2"}, "42");
+        logger.AddMicroIterionLog("area2.mps", 1, 1, "20.3", {}, "15");
     }
 
     std::string expected_log = "micro_iterations_proc_" + std::to_string(g_world->rank()) + ".log";
@@ -121,8 +121,8 @@ TEST_F(MicroIterationsLogTest, AddMicroIterationLog)
     std::string content((std::istreambuf_iterator<char>(in)),
                          std::istreambuf_iterator<char>());
 
-    EXPECT_NE(content.find("area1.mps ; 1 ; 0 ; 10.5"), std::string::npos);
-    EXPECT_NE(content.find("area2.mps ; 1 ; 1 ; 20.3"), std::string::npos);
+    EXPECT_NE(content.find("area1.mps ; 1 ; 0 ; 10.5 ; 42 ms"), std::string::npos);
+    EXPECT_NE(content.find("area2.mps ; 1 ; 1 ; 20.3 ; 15 ms"), std::string::npos);
 }
 
 TEST_F(MicroIterationsLogTest, AddMicroIterCount)

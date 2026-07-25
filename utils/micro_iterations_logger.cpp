@@ -103,12 +103,14 @@ void MicroIterationsLog::AddMicroIterionLog(std::string sub_name,
                                             int num_micro_iter,
                                             int num_master_iter,
                                             std::string solving_time,
-                                            std::vector<std::string> added_constraints_keys)
+                                            std::vector<std::string> added_constraints_keys,
+                                            std::string elapsed_time)
 {
     enqueue([this, sub_name = std::move(sub_name), num_micro_iter, num_master_iter,
              solving_time = std::move(solving_time),
-             added_constraints_keys = std::move(added_constraints_keys)] {
-        log_file_ << sub_name << " ; " << num_master_iter << " ; " << num_micro_iter << " ; " << solving_time << "\n";
+             added_constraints_keys = std::move(added_constraints_keys),
+             elapsed_time = std::move(elapsed_time)] {
+        log_file_ << sub_name << " ; " << num_master_iter << " ; " << num_micro_iter << " ; " << solving_time << " ; " << elapsed_time << " ms\n";
     });
 }
 

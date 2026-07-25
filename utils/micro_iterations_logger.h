@@ -80,9 +80,10 @@ public:
     */
     void AddMicroIterionLog(std::string sub_name,
                             int num_micro_iter,
-                            int num_master_iter, 
+                            int num_master_iter,
                             std::string solving_time,
-                            std::vector<std::string> added_constraints_keys);
+                            std::vector<std::string> added_constraints_keys,
+                            std::string elapsed_time);
 
     void AddMicroIterCount(std::string sub_name, int num_micro_iter);
 

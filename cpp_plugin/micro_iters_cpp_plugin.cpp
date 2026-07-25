@@ -197,13 +197,14 @@ extern "C"
                                 bool& added_rows,
                                 std::string solving_time,
                                 std::vector<double> sub_solution,
-                                std::vector<int>& variables_indices_vector, 
+                                std::vector<int>& variables_indices_vector,
                                 std::vector<std::string>& variables_names_vector,
-                                std::filesystem::path input_root, 
+                                std::filesystem::path input_root,
                                 std::vector<std::string>& constraints_to_add_vec,
-                                int num_master_iter, 
+                                int num_master_iter,
                                 int num_micro_iter)
     {
+        auto chrono_start = std::chrono::steady_clock::now();
 
         auto constraints_dict = get_constraints_dict(input_root)  ;
         auto& variables_dict = get_variables_dictionary(input_root);
@@ -227,7 +228,12 @@ extern "C"
         auto size_after = added_constraints_families_per_sub[sub_name].size();
 
         micro_iterations_logger->DumpAddedConstraints(num_micro_iter, num_master_iter, sub_name, added_constraints_families_per_sub[sub_name], size_before, size_after);
-        micro_iterations_logger->AddMicroIterionLog(sub_name, num_micro_iter, num_master_iter, solving_time, constraints_to_add_vec);
+
+        auto chrono_end = std::chrono::steady_clock::now();
+        auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(chrono_end - chrono_start).count();
+        std::string elapsed_time = std::to_string(elapsed_ms);
+
+        micro_iterations_logger->AddMicroIterionLog(sub_name, num_micro_iter, num_master_iter, solving_time, constraints_to_add_vec, elapsed_time);
 
     }
 
