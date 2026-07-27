@@ -227,12 +227,11 @@ extern "C"
         }
         auto size_after = added_constraints_families_per_sub[sub_name].size();
 
-        micro_iterations_logger->DumpAddedConstraints(num_micro_iter, num_master_iter, sub_name, added_constraints_families_per_sub[sub_name], size_before, size_after);
-
         auto chrono_end = std::chrono::steady_clock::now();
         auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(chrono_end - chrono_start).count();
         std::string elapsed_time = std::to_string(elapsed_ms);
-
+        
+        micro_iterations_logger->DumpAddedConstraints(num_micro_iter, num_master_iter, sub_name, added_constraints_families_per_sub[sub_name], size_before, size_after);
         micro_iterations_logger->AddMicroIterionLog(sub_name, num_micro_iter, num_master_iter, solving_time, constraints_to_add_vec, elapsed_time);
 
     }
@@ -262,9 +261,7 @@ extern "C"
                 }
             }
             auto chrono_start = std::chrono::high_resolution_clock::now();
-            std::cout<<"start computing factors "<<std::endl ;
-            plugin->compute_factors_for_micro_iterations(z_dict) ;
-            std::cout<<"ended computing factors "<<std::endl ;
+	    plugin->compute_factors_for_micro_iterations(z_dict) ;
             auto chrono_end = std::chrono::high_resolution_clock::now();
             elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(chrono_end - chrono_start).count();
         }
