@@ -161,8 +161,7 @@ bool check_if_constraints_family_added(std::string sub_name,const char* violated
 
 extern "C"
 {
-    void OnBendersStart(std::vector<std::string> sub_problems, int rank, 
-                        std::filesystem::path input_root, std::filesystem::path output_root, 
+    void OnBendersStart(std::filesystem::path input_root, std::filesystem::path output_root, 
                         bool warm_start, mpi::communicator* world, int log_level)
 
     {
@@ -194,7 +193,6 @@ extern "C"
     }
 
     void OnBendersMicroIterationEnd(std::string sub_name,
-                                bool& added_rows,
                                 std::string solving_time,
                                 std::vector<double> sub_solution,
                                 std::vector<int>& variables_indices_vector,
@@ -230,6 +228,7 @@ extern "C"
         auto chrono_end = std::chrono::steady_clock::now();
         auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(chrono_end - chrono_start).count();
         std::string elapsed_time = std::to_string(elapsed_ms);
+
         
         micro_iterations_logger->DumpAddedConstraints(num_micro_iter, num_master_iter, sub_name, added_constraints_families_per_sub[sub_name], size_before, size_after);
         micro_iterations_logger->AddMicroIterionLog(sub_name, num_micro_iter, num_master_iter, solving_time, constraints_to_add_vec, elapsed_time);
@@ -245,7 +244,6 @@ extern "C"
                 std::map<std::string, double>& master_out,
                 int& num_iter,
                 mpi::communicator* world,
-                std::map<std::string, std::vector<std::string>>& added_constraintes_per_sub,
                 std::filesystem::path input_root)
 
     {
@@ -274,7 +272,7 @@ extern "C"
     void OnBendersSubResolutionStart()
     {
     }
-    void OnBendersSubResolutionEnd(std::string sub_name, int num_micro_iter)
+    void OnBendersSubResolutionEnd()
     {
     }
 
