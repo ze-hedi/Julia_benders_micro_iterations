@@ -74,14 +74,25 @@ GoogleTest is fetched by CMake (`FetchContent`, v1.15.2). Two suites :
 
 ### Configuration
 
-The plugin reads `micro_iterations_config.txt` (`key=value` per line) next to the run directory :
+The plugin reads a JSON configuration file (`micro_iterations_config.json`) to tune its behaviour. All fields are optional — omitting one keeps the default value.
 
-| Key | Meaning | Default |
-|---|---|---|
-| `max_constraints_per_micro_it` | max number of constraints injected per micro iteration | 200 |
-| `add_N_constraint_first` | skip the N-K constraint of a branch already constrained in N | false |
-| `tol_N` | tolerance factor on the N flow limit | 1.001 |
-| `tol_N_K` | tolerance factor on the N-K flow limit | 1.0 |
+| Key | Type | Default | Meaning |
+|---|---|---|---|
+| `max_constraints_per_micro_it` | int | 200 | Maximum number of constraints injected into a subproblem per micro iteration. Keeping this bounded avoids making the subproblem too large too quickly. |
+| `add_N_constraint` | bool | false | When true, a branch that is already constrained under the N regime is not additionally constrained under any N-K scenario, reducing constraint redundancy. |
+| `tol_N` | double | 1.001 | Tolerance factor applied to the N flow limit: a branch is considered overloaded only if its flow exceeds `tol_N × max_flow_N`. A value slightly above 1 avoids injecting constraints for marginal violations. |
+| `tol_N_K` | double | 1.0 | Same tolerance factor but applied to the N-K flow limit. |
+
+Example file:
+
+```json
+{
+  "max_constraints_per_micro_it": 150,
+  "add_N_constraint": true,
+  "tol_N": 1.005,
+  "tol_N_K": 1.0
+}
+```
 
 ### Build
 
