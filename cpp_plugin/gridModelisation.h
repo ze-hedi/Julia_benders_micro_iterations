@@ -177,27 +177,7 @@ class Plugin
         data_path_ = data_path ;
         world_ = world ;
 
-        std::ifstream config_file(config_path) ;
-        if (!config_file.is_open()) {
-            throw std::runtime_error("Cannot open config file: " + config_path) ;
-        }
-        std::string line ;
-        while (std::getline(config_file, line)) {
-            if (line.empty()) continue ;
-            auto pos = line.find('=') ;
-            if (pos == std::string::npos) continue ;
-            std::string key = line.substr(0, pos) ;
-            std::string value = line.substr(pos + 1) ;
-            if (key == "max_constraints_per_micro_it") {
-                max_constraints_per_micro_it_ = std::stoi(value) ;
-            } else if (key == "add_N_constraint_first") {
-                add_N_constraint_first_ = (value == "true" || value == "1") ;
-            } else if (key == "tol_N") {
-                tol_N_ = std::stod(value) ;
-            } else if (key == "tol_N_K") {
-                tol_N_K_ = std::stod(value) ;
-            }
-        }
+        load_config(config_path) ;
         B_inv_ = load_dense_named(data_path_ + "/B_inv") ;
         Ab_  = load_sparse_named<std::string,std::string>(data_path_ + "/Ab") ;
         Yl_ =  load_sparse_named<std::string,std::string>(data_path_+"/Yl") ;
@@ -680,7 +660,20 @@ class Plugin
     const std::map<std::string, std::vector<std::string>>& get_dict_incident_HVDC_branches() const { return dict_incident_HVDC_branches_ ; }
 
     private :
-    mpi::communicator* world_ ; 
+
+    void load_config(const std::string& config_path) {
+        std::ifstream f(config_path) ;
+        if (!f.is_open()) {
+            throw std::runtime_error("Cannot open config file: " + config_path) ;
+        }
+        json j = json::parse(f) ;
+        max_constraints_per_micro_it_ = j.value("max_constraints_per_micro_it", 200) ;
+        add_N_constraint_first_       = j.value("add_N_constraint", false) ;
+        tol_N_                        = j.value("tol_N", 1.001) ;
+        tol_N_K_                      = j.value("tol_N_K", 1.0) ;
+    }
+
+    mpi::communicator* world_ ;
     std::string data_path_ ;
     NamedMatrix<Eigen::MatrixXd,int,int> B_inv_ ;
     NamedMatrix<Eigen::SparseMatrix<double>,std::string,std::string> Ab_ ;
