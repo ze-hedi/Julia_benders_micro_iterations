@@ -14,40 +14,61 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install dependencies
+      - name: Install system packages
         run: |
           dnf install -y epel-release
           dnf config-manager --set-enabled ol8_codeready_builder
           dnf install -y \
-            gcc-toolset-11 \
+            gcc-toolset-13 \
             cmake \
             make \
             git \
-            openmpi-devel \
-            boost-openmpi-devel \
-            boost-serialization \
+            wget \
+            perl \
             eigen3-devel \
             json-devel
 
+      - name: Build OpenMPI 4.1.8
+        run: |
+          source /opt/rh/gcc-toolset-13/enable
+          wget https://download.open-mpi.org/release/open-mpi/v4.1/openmpi-4.1.8.tar.gz
+          tar -xzf openmpi-4.1.8.tar.gz
+          cd openmpi-4.1.8
+          ./configure --prefix=/opt/openmpi-4.1.8
+          make -j$(nproc)
+          make install
+
+      - name: Build Boost 1.66.0
+        run: |
+          source /opt/rh/gcc-toolset-13/enable
+          wget https://archives.boost.io/release/1.66.0/source/boost_1_66_0.tar.gz
+          tar -xzf boost_1_66_0.tar.gz
+          cd boost_1_66_0
+          ./bootstrap.sh --prefix=/opt/boost-1.66.0 --with-toolset=gcc
+          echo "using mpi : /opt/openmpi-4.1.8/bin/mpicxx ;" >> project-config.jam
+          ./b2 --with-mpi --with-serialization install -j$(nproc)
+
       - name: Configure
         run: |
-          source /opt/rh/gcc-toolset-11/enable
-          source /etc/profile.d/modules.sh
-          module load mpi/openmpi-x86_64
-          cmake -B build/ol8 -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON
+          source /opt/rh/gcc-toolset-13/enable
+          export PATH=/opt/openmpi-4.1.8/bin:$PATH
+          cmake -B build/ol8 \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_TESTS=ON \
+            -DBOOST_ROOT=/opt/boost-1.66.0 \
+            -DMPI_HOME=/opt/openmpi-4.1.8
 
       - name: Build
         run: |
-          source /opt/rh/gcc-toolset-11/enable
-          source /etc/profile.d/modules.sh
-          module load mpi/openmpi-x86_64
+          source /opt/rh/gcc-toolset-13/enable
+          export PATH=/opt/openmpi-4.1.8/bin:$PATH
           cmake --build build/ol8
 
       - name: Run tests
         run: |
-          source /opt/rh/gcc-toolset-11/enable
-          source /etc/profile.d/modules.sh
-          module load mpi/openmpi-x86_64
+          source /opt/rh/gcc-toolset-13/enable
+          export PATH=/opt/openmpi-4.1.8/bin:$PATH
+          export LD_LIBRARY_PATH=/opt/openmpi-4.1.8/lib:/opt/boost-1.66.0/lib:$LD_LIBRARY_PATH
           export OMPI_ALLOW_RUN_AS_ROOT=1
           export OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1
           ctest --test-dir build/ol8 --output-on-failure
