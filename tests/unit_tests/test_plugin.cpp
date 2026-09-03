@@ -24,7 +24,7 @@ protected:
 TEST_F(PluginTest, ComputeFactorsAndReturnConstraints)
 {
     std::string data_path = (test_utils_dir / "cpp_structures").string();
-    std::string config_path = (test_utils_dir / "micro_iters_config.txt").string();
+    std::string config_path = (test_utils_dir / "plugin_config.json").string();
     Plugin plugin(data_path, nullptr, config_path);
 
     // Read z_dict: no sub_name header, all lines are "key : value"

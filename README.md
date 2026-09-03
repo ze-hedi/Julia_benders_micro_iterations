@@ -74,7 +74,7 @@ GoogleTest is fetched by CMake (`FetchContent`, v1.15.2). Two suites :
 
 ### Configuration
 
-The plugin reads a JSON configuration file (`micro_iterations_config.json`) to tune its behaviour. All fields are optional — omitting one keeps the default value.
+The plugin reads a JSON configuration file (`plugin_inputs/plugin_params.json`) to tune its behaviour. All fields are optional — omitting one keeps the default value.
 
 | Key | Type | Default | Meaning |
 |---|---|---|---|

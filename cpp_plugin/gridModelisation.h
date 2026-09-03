@@ -664,7 +664,8 @@ class Plugin
     void load_config(const std::string& config_path) {
         std::ifstream f(config_path) ;
         if (!f.is_open()) {
-            throw std::runtime_error("Cannot open config file: " + config_path) ;
+            std::cerr << "Cannot open config file: " << config_path << ", using default values." << std::endl ;
+            return ;
         }
         json j = json::parse(f) ;
         max_constraints_per_micro_it_ = j.value("max_constraints_per_micro_it", 200) ;
