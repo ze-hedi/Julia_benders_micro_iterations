@@ -664,7 +664,11 @@ class Plugin
     void load_config(const std::string& config_path) {
         std::ifstream f(config_path) ;
         if (!f.is_open()) {
-            std::cerr << "Cannot open config file: " << config_path << ", using default values." << std::endl ;
+            std::cerr << "[Plugin ERROR] Cannot open config file: " << config_path << ", using default values:" << std::endl ;
+            std::cerr << "  max_constraints_per_micro_it = " << max_constraints_per_micro_it_ << std::endl ;
+            std::cerr << "  add_N_constraint_first       = " << std::boolalpha << add_N_constraint_first_ << std::endl ;
+            std::cerr << "  tol_N                        = " << tol_N_ << std::endl ;
+            std::cerr << "  tol_N_K                      = " << tol_N_K_ << std::endl ;
             return ;
         }
         json j = json::parse(f) ;
