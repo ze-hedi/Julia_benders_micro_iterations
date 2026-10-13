@@ -215,12 +215,12 @@ extern "C"
         }
         auto constraints_families = plugin->return_constraints_for_micro_iteration(sub_name, F_N_values);
         auto size_before = added_constraints_families_per_sub[sub_name].size();
-        for (const auto& constraint_family : constraints_families)
+        for (const auto& [family_name, is_N] : constraints_families)
         {
-            if (!check_if_constraints_family_added(sub_name, constraint_family.c_str()))
+            if (!check_if_constraints_family_added(sub_name, family_name.c_str()))
             {
-                added_constraints_families_per_sub[sub_name].push_back(constraint_family) ;
-                constraints_to_add_vec.insert(constraints_to_add_vec.end(), constraints_dict[constraint_family].begin(), constraints_dict[constraint_family].end()) ;
+                added_constraints_families_per_sub[sub_name].push_back(family_name) ;
+                constraints_to_add_vec.insert(constraints_to_add_vec.end(), constraints_dict[family_name].begin(), constraints_dict[family_name].end()) ;
             }
         }
         auto size_after = added_constraints_families_per_sub[sub_name].size();

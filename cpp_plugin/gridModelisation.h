@@ -587,14 +587,15 @@ class Plugin
         return dict_results_overflow_N_K ;
     }
 
-    //max_constraints_per_micro_it to set in micro_iteration_config 
-    //add_N_constraint_first to set in micro 
-    std::vector<std::string>
+    //max_constraints_per_micro_it to set in micro_iteration_config
+    //add_N_constraint_first to set in micro
+    // Returns pairs of (family_name, is_N) where is_N=true means N constraint, false means N-K
+    std::vector<std::pair<std::string, bool>>
     sort_results_and_return_constraints(
         const std::map<std::string, double>& dict_results_overflow_N,
         const std::map<std::pair<std::string,std::string>, double>& dict_results_overflow_N_K)
     {
-        std::vector<std::string> constraints_to_add ;
+        std::vector<std::pair<std::string, bool>> constraints_to_add ;
         std::vector<std::string> N_constraints_micro_it ;
         std::vector<std::string> N_K_constraints_micro_it ;
 
@@ -608,7 +609,7 @@ class Plugin
         for (const auto& [monitored, val] : dict_results_overflow_N) {
             if ((int)(N_constraints_micro_it.size() + N_K_constraints_micro_it.size()) >= max_constraints_per_micro_it_)
                 break ;
-            constraints_to_add.push_back("branch_" + monitored) ;
+            constraints_to_add.push_back({"branch_" + monitored, true}) ;
             N_constraints_micro_it.push_back(monitored) ;
         }
 
@@ -625,8 +626,8 @@ class Plugin
                 bool in_N = std::find(N_constraints_micro_it.begin(), N_constraints_micro_it.end(), monitored)
                                 != N_constraints_micro_it.end() ;
                 if (!(add_N_constraint_first_ && in_N)) {
-                    constraints_to_add.push_back("branch_" + monitored + "_inc_" + incident) ;
-                    constraints_to_add.push_back("inc_" + incident) ;
+                    constraints_to_add.push_back({"branch_" + monitored + "_inc_" + incident, false}) ;
+                    constraints_to_add.push_back({"inc_" + incident, false}) ;
                     N_K_constraints_micro_it.push_back(monitored) ;
                 }
             }
@@ -635,10 +636,10 @@ class Plugin
     }
 
 
-    //tol_N to set in micro config 
-    //tol_N_K to set in micro config 
-    //to do here 
-    std::vector<std::string>
+    //tol_N to set in micro config
+    //tol_N_K to set in micro config
+    // Returns pairs of (family_name, is_N) where is_N=true means N constraint, false means N-K
+    std::vector<std::pair<std::string, bool>>
     return_constraints_for_micro_iteration(
         const std::string& sub_problem ,
         const std::map<std::string, double>& F_N_values)
