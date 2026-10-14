@@ -126,17 +126,25 @@ std::map<std::string,std::string> read_binary_variables_ids_map(const std::files
 
 std::map<std::string, std::vector<std::string>>& get_added_constraints_families_per_sub() 
 {
-  static std::map<std::string, std::vector<std::string>> added_constraints_families_per_sub ; 
+  static std::map<std::string, std::vector<std::string>> added_constraints_families_per_sub ;
   return added_constraints_families_per_sub ; 
+}
+
+std::map<std::string, std::vector<bool>>& get_added_constraints_families_per_sub_is_N() 
+{
+  static std::map<std::string, std::vector<bool>> added_constraints_families_per_sub_is_N ;     
+  return added_constraints_families_per_sub_is_N ; 
 }
 
 
 void clean_added_constraints_families_per_sub()
 {
   auto& added_constraints_families_per_sub = get_added_constraints_families_per_sub() ;
+  auto& added_constraints_families_per_sub_is_N = get_added_constraints_families_per_sub_is_N() ; 
   for (auto& [sub_name,constraints] : added_constraints_families_per_sub)
   {
     constraints.clear() ;
+    added_constraints_families_per_sub_is_N[sub_name].clear() ; 
   }
 }
 
@@ -207,6 +215,7 @@ extern "C"
         auto constraints_dict = get_constraints_dict(input_root)  ;
         auto& variables_dict = get_variables_dictionary(input_root);
         auto& added_constraints_families_per_sub = get_added_constraints_families_per_sub();
+        auto& added_constraints_families_per_sub_is_N = get_added_constraints_families_per_sub_is_N() ; 
         auto plugin = get_plugin();
         std::map<std::string, double> F_N_values ;
         for (int i=0; i<variables_indices_vector.size(); ++i)
@@ -220,6 +229,7 @@ extern "C"
             if (!check_if_constraints_family_added(sub_name, family_name.c_str()))
             {
                 added_constraints_families_per_sub[sub_name].push_back(family_name) ;
+                added_constraints_families_per_sub_is_N[sub_name].push_back(is_N) ; 
                 constraints_to_add_vec.insert(constraints_to_add_vec.end(), constraints_dict[family_name].begin(), constraints_dict[family_name].end()) ;
             }
         }
@@ -230,7 +240,7 @@ extern "C"
         std::string elapsed_time = std::to_string(elapsed_ms);
 
         
-        micro_iterations_logger->DumpAddedConstraints(num_micro_iter, num_master_iter, sub_name, added_constraints_families_per_sub[sub_name], size_before, size_after);
+        micro_iterations_logger->DumpAddedConstraints(num_micro_iter, num_master_iter, sub_name, added_constraints_families_per_sub[sub_name],added_constraints_families_per_sub_is_N[sub_name], size_before, size_after);
         micro_iterations_logger->AddMicroIterionLog(sub_name, num_micro_iter, num_master_iter, solving_time, constraints_to_add_vec, elapsed_time);
 
     }

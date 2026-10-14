@@ -91,6 +91,7 @@ public:
                               int num_master_iter,
                               std::string sub_name,
                               const std::vector<std::string>& constraints_to_add,
+                              const std::vector<bool>& constraints_to_add_is_N,
                               size_t start,
                               size_t end);
 

@@ -147,7 +147,8 @@ TEST_F(MicroIterationsLogTest, DumpAddedConstraintsCreatesFile)
     {
         MicroIterationsLog logger(tmp_dir, false, g_world, 0);
         std::vector<std::string> constraints = {"constraint_A", "constraint_B", "constraint_C"};
-        logger.DumpAddedConstraints(0, 1, "path/to/area1.mps", constraints, 0, constraints.size());
+        std::vector<bool> is_N = {true, false, true};
+        logger.DumpAddedConstraints(0, 1, "path/to/area1.mps", constraints, is_N, 0, constraints.size());
     }
 
     if (g_world->rank() == 0)
@@ -160,9 +161,10 @@ TEST_F(MicroIterationsLogTest, DumpAddedConstraintsCreatesFile)
         std::string content((std::istreambuf_iterator<char>(in)),
                              std::istreambuf_iterator<char>());
 
-        EXPECT_NE(content.find("constraint_A"), std::string::npos);
-        EXPECT_NE(content.find("constraint_B"), std::string::npos);
-        EXPECT_NE(content.find("constraint_C"), std::string::npos);
+        // All constraints are written: 1 for N, 0 for N_K
+        EXPECT_NE(content.find("constraint_A 1"), std::string::npos);
+        EXPECT_NE(content.find("constraint_B 0"), std::string::npos);
+        EXPECT_NE(content.find("constraint_C 1"), std::string::npos);
     }
 }
 
@@ -170,9 +172,9 @@ TEST_F(MicroIterationsLogTest, DumpAddedConstraintsMultipleMicroIterations)
 {
     {
         MicroIterationsLog logger(tmp_dir, false, g_world, 0);
-        logger.DumpAddedConstraints(0, 1, "sub1.mps", {"c1", "c2"}, 0, 2);
-        logger.DumpAddedConstraints(1, 1, "sub1.mps", {"c3"}, 0, 1);
-        logger.DumpAddedConstraints(0, 2, "sub1.mps", {"c4", "c5"}, 0, 2);
+        logger.DumpAddedConstraints(0, 1, "sub1.mps", {"c1", "c2"}, {true, true}, 0, 2);
+        logger.DumpAddedConstraints(1, 1, "sub1.mps", {"c3"}, {true}, 0, 1);
+        logger.DumpAddedConstraints(0, 2, "sub1.mps", {"c4", "c5"}, {true, true}, 0, 2);
     }
 
     if (g_world->rank() == 0)
