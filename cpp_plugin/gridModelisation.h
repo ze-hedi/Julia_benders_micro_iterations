@@ -1,6 +1,7 @@
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
 #include <nlohmann/json.hpp>
+#include <limits>
 #include <fstream>
 #include <map>
 #include <string>
@@ -605,8 +606,15 @@ class Plugin
         std::sort(sorted_results_overflow_N_K.begin(), sorted_results_overflow_N_K.end(),
             [](const auto& a, const auto& b) { return a.second > b.second ; }) ;
 
+        
+        std::vector<std::pair<std::string,double>> sorted_results_overlow_N(
+            dict_results_overflow_N.begin(),dict_results_overflow_N.end()
+        ) ; 
+        std::sort(sorted_results_overlow_N.begin(),sorted_results_overlow_N.end(), 
+                [](const auto& a, const auto& b){ return a.second>b.second ; }) ; 
+                
         // Add N constraints
-        for (const auto& [monitored, val] : dict_results_overflow_N) {
+        for (const auto& [monitored, val] : sorted_results_overlow_N) {
             if ((int)(N_constraints_micro_it.size() + N_K_constraints_micro_it.size()) >= max_constraints_per_micro_it_)
                 break ;
             constraints_to_add.push_back({"branch_" + monitored, true}) ;
@@ -673,7 +681,7 @@ class Plugin
             return ;
         }
         json j = json::parse(f) ;
-        max_constraints_per_micro_it_ = j.value("max_constraints_per_micro_it", 200) ;
+        max_constraints_per_micro_it_ = j.value("max_constraints_per_micro_it", std::numeric_limits<int>::max()) ;
         add_N_constraint_first_       = j.value("add_N_constraint", false) ;
         tol_N_                        = j.value("tol_N", 1.001) ;
         tol_N_K_                      = j.value("tol_N_K", 1.0) ;
@@ -695,7 +703,7 @@ class Plugin
     std::vector<std::string> all_monitored_branches_ ; 
     std::map<std::pair<std::string,std::string>,double> HVDC_new_dict_  ; 
     std::map<std::tuple<std::string,std::string,std::string>, double> dict_incident_factors_  ;
-    int max_constraints_per_micro_it_ = 200 ;
+    int max_constraints_per_micro_it_ = std::numeric_limits<int>::max() ;
     bool add_N_constraint_first_ = false ;
     double tol_N_ = 1.001 ;
     double tol_N_K_ = 1.0 ;

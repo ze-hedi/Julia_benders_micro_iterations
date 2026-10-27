@@ -21,6 +21,8 @@
 #include <boost/mpi.hpp>
 #include "iostream"
 
+#include "micro_iterations_http_sender.h"
+
 namespace mpi = boost::mpi;
 
 
@@ -104,6 +106,8 @@ public:
 private:
     void enqueue(std::function<void()> task);
     void workerLoop();
+    void enqueueHttp(std::string body);
+    void httpWorkerLoop();
 
     std::filesystem::path output_root_ ;
     mpi::communicator* _world;
@@ -118,4 +122,13 @@ private:
     std::condition_variable queue_cv_;
     std::queue<std::function<void()>> task_queue_;
     bool stop_ = false;
+
+    // async http sending (POST /micro_iter on localhost:8080), own thread so a slow or absent
+    // server never delays file logging
+    MicroIterationsHttpSender http_sender_{"127.0.0.1", 8080, "/micro_iter"};
+    std::thread http_thread_;
+    std::mutex http_mutex_;
+    std::condition_variable http_cv_;
+    std::queue<std::string> http_queue_;
+    bool http_stop_ = false;
 };

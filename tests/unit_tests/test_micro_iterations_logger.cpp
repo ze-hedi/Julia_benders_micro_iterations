@@ -154,7 +154,8 @@ TEST_F(MicroIterationsLogTest, DumpAddedConstraintsCreatesFile)
     if (g_world->rank() == 0)
     {
         fs::path expected_file = tmp_dir / "added_constraints"
-                                         / "micro_iter_0_master_1_area1.txt";
+                                         / "master_1" / "area1"
+                                         / "micro_iter_0.txt";
         ASSERT_TRUE(fs::exists(expected_file)) << "Constraint file not created: " << expected_file;
 
         std::ifstream in(expected_file);
@@ -179,12 +180,12 @@ TEST_F(MicroIterationsLogTest, DumpAddedConstraintsMultipleMicroIterations)
 
     if (g_world->rank() == 0)
     {
-        EXPECT_TRUE(fs::exists(tmp_dir / "added_constraints" / "micro_iter_0_master_1_sub1.txt"));
-        EXPECT_TRUE(fs::exists(tmp_dir / "added_constraints" / "micro_iter_1_master_1_sub1.txt"));
-        EXPECT_TRUE(fs::exists(tmp_dir / "added_constraints" / "micro_iter_0_master_2_sub1.txt"));
+        EXPECT_TRUE(fs::exists(tmp_dir / "added_constraints" / "master_1" / "sub1" / "micro_iter_0.txt"));
+        EXPECT_TRUE(fs::exists(tmp_dir / "added_constraints" / "master_1" / "sub1" / "micro_iter_1.txt"));
+        EXPECT_TRUE(fs::exists(tmp_dir / "added_constraints" / "master_2" / "sub1" / "micro_iter_0.txt"));
 
         // Verify content of the second file
-        std::ifstream in(tmp_dir / "added_constraints" / "micro_iter_1_master_1_sub1.txt");
+        std::ifstream in(tmp_dir / "added_constraints" / "master_1" / "sub1" / "micro_iter_1.txt");
         std::string content((std::istreambuf_iterator<char>(in)),
                              std::istreambuf_iterator<char>());
         EXPECT_NE(content.find("c3"), std::string::npos);

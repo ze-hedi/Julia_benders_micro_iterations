@@ -78,7 +78,7 @@ The plugin reads a JSON configuration file (`plugin_inputs/plugin_params.json`) 
 
 | Key | Type | Default | Meaning |
 |---|---|---|---|
-| `max_constraints_per_micro_it` | int | 200 | Maximum number of constraints injected into a subproblem per micro iteration. Keeping this bounded avoids making the subproblem too large too quickly. |
+| `max_constraints_per_micro_it` | int | `INT_MAX` (no limit) | Maximum number of constraints injected into a subproblem per micro iteration. Keeping this bounded avoids making the subproblem too large too quickly. |
 | `add_N_constraint` | bool | false | When true, a branch that is already constrained under the N regime is not additionally constrained under any N-K scenario, reducing constraint redundancy. |
 | `tol_N` | double | 1.001 | Tolerance factor applied to the N flow limit: a branch is considered overloaded only if its flow exceeds `tol_N × max_flow_N`. A value slightly above 1 avoids injecting constraints for marginal violations. |
 | `tol_N_K` | double | 1.0 | Same tolerance factor but applied to the N-K flow limit. |

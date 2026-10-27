@@ -41,15 +41,14 @@ MicroIterationsLog::MicroIterationsLog(
         }
         else
         {
-            for (const auto& entry : std::filesystem::directory_iterator(added_constraints_repo_path))
-            {
-                std::filesystem::remove(entry.path());
-            }
+            std::filesystem::remove_all(added_constraints_repo_path);
+            std::filesystem::create_directories(added_constraints_repo_path);
         }
     }
 
     // Start the background worker thread
     worker_thread_ = std::thread(&MicroIterationsLog::workerLoop, this);
+    http_thread_ = std::thread(&MicroIterationsLog::httpWorkerLoop, this);
 }
 
 MicroIterationsLog::~MicroIterationsLog()
@@ -61,6 +60,15 @@ MicroIterationsLog::~MicroIterationsLog()
     queue_cv_.notify_one();
     if (worker_thread_.joinable()) {
         worker_thread_.join();
+    }
+
+    {
+        std::lock_guard<std::mutex> lock(http_mutex_);
+        http_stop_ = true;
+    }
+    http_cv_.notify_one();
+    if (http_thread_.joinable()) {
+        http_thread_.join();
     }
 }
 
@@ -92,6 +100,35 @@ void MicroIterationsLog::workerLoop()
     }
 }
 
+void MicroIterationsLog::enqueueHttp(std::string body)
+{
+    {
+        std::lock_guard<std::mutex> lock(http_mutex_);
+        http_queue_.push(std::move(body));
+    }
+    http_cv_.notify_one();
+}
+
+void MicroIterationsLog::httpWorkerLoop()
+{
+    while (true) {
+        std::string body;
+        {
+            std::unique_lock<std::mutex> lock(http_mutex_);
+            http_cv_.wait(lock, [this] { return http_stop_ || !http_queue_.empty(); });
+
+            if (http_stop_ && http_queue_.empty()) {
+                break;
+            }
+
+            body = std::move(http_queue_.front());
+            http_queue_.pop();
+        }
+        // failures are reported on stderr by the sender; never block or abort the solver
+        http_sender_.Send(body);
+    }
+}
+
 void MicroIterationsLog::AddMasterIterationLog(int num_iter, std::string elapsed_time)
 {
     enqueue([this, num_iter, elapsed_time = std::move(elapsed_time)] {
@@ -106,11 +143,20 @@ void MicroIterationsLog::AddMicroIterionLog(std::string sub_name,
                                             std::vector<std::string> added_constraints_keys,
                                             std::string elapsed_time)
 {
+    nlohmann::json payload = {{"rank", _world->rank()},
+                              {"sub_name", sub_name},
+                              {"num_master_iter", num_master_iter},
+                              {"num_micro_iter", num_micro_iter},
+                              {"nb_added_constraints", added_constraints_keys.size()},
+                              {"solving_time", solving_time},
+                              {"elapsed_time", elapsed_time}};
+    enqueueHttp(payload.dump());
+
     enqueue([this, sub_name = std::move(sub_name), num_micro_iter, num_master_iter,
              solving_time = std::move(solving_time),
              added_constraints_keys = std::move(added_constraints_keys),
              elapsed_time = std::move(elapsed_time)] {
-        log_file_ << sub_name << " ; " << num_master_iter << " ; " << num_micro_iter << " ; " << solving_time << " ; " << elapsed_time << " ms\n";
+        log_file_ << sub_name << " ; " << num_master_iter << " ; " << num_micro_iter << " ; " <<added_constraints_keys.size()<<' ; ' <<solving_time <<" ms"<< " ; " << elapsed_time << " ms\n";
     });
 }
 
@@ -134,10 +180,14 @@ void MicroIterationsLog::DumpAddedConstraints(int num_micro_iter,
         if (mps_pos != std::string::npos)
             clean_sub_name = clean_sub_name.substr(0, mps_pos);
 
-        std::string filename = "micro_iter_" + std::to_string(num_micro_iter)
-                             + "_master_" + std::to_string(num_master_iter)
-                             + "_" + clean_sub_name + ".txt";
-        std::filesystem::path filepath = added_constraints_dir / filename;
+        std::filesystem::path sub_dir = added_constraints_dir
+                                      / ("master_" + std::to_string(num_master_iter))
+                                      / clean_sub_name;
+        if (!std::filesystem::exists(sub_dir))
+            std::filesystem::create_directories(sub_dir);
+
+        std::string filename = "micro_iter_" + std::to_string(num_micro_iter) + ".txt";
+        std::filesystem::path filepath = sub_dir / filename;
 
         std::ofstream out(filepath);
         for (size_t i = start; i < end; ++i) {
