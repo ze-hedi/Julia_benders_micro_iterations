@@ -123,9 +123,9 @@ private:
     std::queue<std::function<void()>> task_queue_;
     bool stop_ = false;
 
-    // async http sending (POST /micro_iter on localhost:8080), own thread so a slow or absent
+    // async http sending (POST /micro_iter on localhost:3123), own thread so a slow or absent
     // server never delays file logging
-    MicroIterationsHttpSender http_sender_{"127.0.0.1", 8080, "/micro_iter"};
+    MicroIterationsHttpSender http_sender_{"127.0.0.1", 3123, "/micro_iter"};
     std::thread http_thread_;
     std::mutex http_mutex_;
     std::condition_variable http_cv_;
