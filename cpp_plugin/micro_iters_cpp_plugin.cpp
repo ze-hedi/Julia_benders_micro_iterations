@@ -167,6 +167,12 @@ bool check_if_constraints_family_added(std::string sub_name,const char* violated
 
 
 
+std::chrono::steady_clock::time_point& get_master_resolution_start()
+{
+  static std::chrono::steady_clock::time_point start;
+  return start;
+}
+
 extern "C"
 {
     void OnBendersStart(std::filesystem::path input_root, std::filesystem::path output_root, 
@@ -252,6 +258,7 @@ extern "C"
 
     void  OnBendersMasterResolutionEnd(
                 std::map<std::string, double>& master_out,
+                double master_resolution_time,
                 int& num_iter,
                 mpi::communicator* world,
                 std::filesystem::path input_root)
@@ -274,7 +281,7 @@ extern "C"
             elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(chrono_end - chrono_start).count();
         }
         mpi::broadcast(*world, elapsed_ms, 0);
-        micro_iterations_logger->AddMasterIterationLog(num_iter, std::to_string(elapsed_ms));
+        micro_iterations_logger->AddMasterIterationLog(num_iter, master_resolution_time, std::to_string(elapsed_ms));
         plugin->broadcast_factors() ; 
     }
 

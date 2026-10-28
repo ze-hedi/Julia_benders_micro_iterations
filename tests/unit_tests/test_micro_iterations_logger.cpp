@@ -91,8 +91,8 @@ TEST_F(MicroIterationsLogTest, AddMasterIterationLog)
 {
     {
         MicroIterationsLog logger(tmp_dir, false, g_world, 0);
-        logger.AddMasterIterationLog(1, "42.5");
-        logger.AddMasterIterationLog(2, "13.0");
+        logger.AddMasterIterationLog(1, 120.5, "42.5");
+        logger.AddMasterIterationLog(2, 80, "13.0");
     }
 
     std::string expected_log = "micro_iterations_proc_" + std::to_string(g_world->rank()) + ".log";
@@ -104,6 +104,10 @@ TEST_F(MicroIterationsLogTest, AddMasterIterationLog)
 
     EXPECT_NE(content.find("master iteration 1 elapsed time : 42.5 ms"), std::string::npos);
     EXPECT_NE(content.find("master iteration 2 elapsed time : 13.0 ms"), std::string::npos);
+    EXPECT_NE(content.find("master iteration 1 elapsed time : 42.5 ms ; master resolution time : 120.5 ms"),
+              std::string::npos);
+    EXPECT_NE(content.find("master iteration 2 elapsed time : 13.0 ms ; master resolution time : 80 ms"),
+              std::string::npos);
 }
 
 TEST_F(MicroIterationsLogTest, AddMicroIterationLog)

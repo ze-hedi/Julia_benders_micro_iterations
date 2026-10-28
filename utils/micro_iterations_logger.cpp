@@ -100,11 +100,11 @@ void MicroIterationsLog::workerLoop()
     }
 }
 
-void MicroIterationsLog::enqueueHttp(std::string body)
+void MicroIterationsLog::enqueueHttp(std::string path, std::string body)
 {
     {
         std::lock_guard<std::mutex> lock(http_mutex_);
-        http_queue_.push(std::move(body));
+        http_queue_.emplace(std::move(path), std::move(body));
     }
     http_cv_.notify_one();
 }
@@ -112,7 +112,7 @@ void MicroIterationsLog::enqueueHttp(std::string body)
 void MicroIterationsLog::httpWorkerLoop()
 {
     while (true) {
-        std::string body;
+        std::pair<std::string, std::string> request;
         {
             std::unique_lock<std::mutex> lock(http_mutex_);
             http_cv_.wait(lock, [this] { return http_stop_ || !http_queue_.empty(); });
@@ -121,18 +121,30 @@ void MicroIterationsLog::httpWorkerLoop()
                 break;
             }
 
-            body = std::move(http_queue_.front());
+            request = std::move(http_queue_.front());
             http_queue_.pop();
         }
         // failures are reported on stderr by the sender; never block or abort the solver
-        http_sender_.Send(body);
+        http_sender_.Send(request.first, request.second);
     }
 }
 
-void MicroIterationsLog::AddMasterIterationLog(int num_iter, std::string elapsed_time)
+void MicroIterationsLog::AddMasterIterationLog(int num_iter,
+                                               double master_resolution_time,
+                                               std::string elapsed_time)
 {
-    enqueue([this, num_iter, elapsed_time = std::move(elapsed_time)] {
-        log_file_ << "master iteration " << num_iter << " elapsed time : " << elapsed_time << " ms" << std::endl;
+    // every rank calls this with the same broadcast values: only rank 0 notifies the frontend
+    if (_world->rank() == 0)
+    {
+        nlohmann::json payload = {{"num_master_iter", num_iter},
+                                  {"elapsed_time", elapsed_time.empty() ? 0.0 : std::stod(elapsed_time)},
+                                  {"master_resolution_time", master_resolution_time * 1000.0}};
+        enqueueHttp("/master_times", payload.dump());
+    }
+
+    enqueue([this, num_iter, master_resolution_time, elapsed_time = std::move(elapsed_time)] {
+        log_file_ << "master iteration " << num_iter << " elapsed time : " << elapsed_time << " ms"
+                  << " ; master resolution time : " << master_resolution_time << " s" << std::endl;
     });
 }
 
@@ -150,13 +162,13 @@ void MicroIterationsLog::AddMicroIterionLog(std::string sub_name,
                               {"nb_added_constraints", added_constraints_keys.size()},
                               {"solving_time", solving_time},
                               {"elapsed_time", elapsed_time}};
-    enqueueHttp(payload.dump());
+    enqueueHttp("/micro_iter", payload.dump());
 
     enqueue([this, sub_name = std::move(sub_name), num_micro_iter, num_master_iter,
              solving_time = std::move(solving_time),
              added_constraints_keys = std::move(added_constraints_keys),
              elapsed_time = std::move(elapsed_time)] {
-        log_file_ << sub_name << " ; " << num_master_iter << " ; " << num_micro_iter << " ; " <<added_constraints_keys.size()<<' ; ' <<solving_time <<" ms"<< " ; " << elapsed_time << " ms\n";
+        log_file_ << sub_name << " ; " << num_master_iter << " ; " << num_micro_iter << " ; " <<added_constraints_keys.size()<< " ; " << solving_time <<" ms"<< " ; " << elapsed_time << " ms\n";
     });
 }
 
@@ -168,6 +180,18 @@ void MicroIterationsLog::DumpAddedConstraints(int num_micro_iter,
                                                size_t start,
                                                size_t end)
 {
+    nlohmann::json constraints = nlohmann::json::array();
+    for (size_t i = start; i < end; ++i) {
+        constraints.push_back({{"name", constraints_to_add[i]},
+                               {"is_N", static_cast<bool>(constraints_to_add_is_N[i])}});
+    }
+    nlohmann::json payload = {{"rank", _world->rank()},
+                              {"sub_name", sub_name},
+                              {"num_master_iter", num_master_iter},
+                              {"num_micro_iter", num_micro_iter},
+                              {"constraints", constraints}};
+    enqueueHttp("/added_constraints", payload.dump());
+
     enqueue([this, num_micro_iter, num_master_iter,
              sub_name = std::move(sub_name),
              constraints_to_add,constraints_to_add_is_N, start, end] {

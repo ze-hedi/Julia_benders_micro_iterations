@@ -62,13 +62,17 @@ public:
                        int log_level);
 
     /*
-        Called in the benders master iteration start callback.
-        It will set the number of iteration and the time to compute the new PTDF.
+        Called in the benders master resolution end callback.
+        It will set the number of iteration, the master resolution time and the time to compute
+        the new PTDF.
         @input
             - num_iter : number of master iteration
+            - master_resolution_time : elapsed time of the master resolution (ms)
             - elapsed_time : elapsed time of computing PTDF
     */
-    void AddMasterIterationLog(int num_iter, std::string elapsed_time = "");
+    void AddMasterIterationLog(int num_iter,
+                               double master_resolution_time,
+                               std::string elapsed_time = "");
 
     /*
         Called in the micro iteration end callback.
@@ -106,7 +110,7 @@ public:
 private:
     void enqueue(std::function<void()> task);
     void workerLoop();
-    void enqueueHttp(std::string body);
+    void enqueueHttp(std::string path, std::string body);
     void httpWorkerLoop();
 
     std::filesystem::path output_root_ ;
@@ -123,12 +127,12 @@ private:
     std::queue<std::function<void()>> task_queue_;
     bool stop_ = false;
 
-    // async http sending (POST /micro_iter on localhost:3123), own thread so a slow or absent
-    // server never delays file logging
-    MicroIterationsHttpSender http_sender_{"127.0.0.1", 3123, "/micro_iter"};
+    // async http sending (POST /micro_iter, /master_times and /added_constraints on localhost:3123), own thread so a
+    // slow or absent server never delays file logging. Queue items are {path, body}.
+    MicroIterationsHttpSender http_sender_{"127.0.0.1", 3123};
     std::thread http_thread_;
     std::mutex http_mutex_;
     std::condition_variable http_cv_;
-    std::queue<std::string> http_queue_;
+    std::queue<std::pair<std::string, std::string>> http_queue_;
     bool http_stop_ = false;
 };

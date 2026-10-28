@@ -57,7 +57,8 @@ Where the work happens :
 | Callback | Action |
 |---|---|
 | `OnBendersStart` | loads dictionaries, builds the `Plugin` and the logger |
-| `OnBendersMasterResolutionEnd` | rank 0 recomputes PTDF / sensitivities / incident factors, then broadcasts them |
+| `OnBendersMasterResolutionStart` | stamps the start time of the master resolution |
+| `OnBendersMasterResolutionEnd` | logs the master resolution time; rank 0 recomputes PTDF / sensitivities / incident factors, then broadcasts them |
 | `OnBendersIterationStart` | resets the per-subproblem "already added" constraint tracking |
 | `OnBendersMicroIterationEnd` | detects the violated constraints and fills `constraints_to_add_vec` |
 

@@ -2,18 +2,19 @@
 
 #include <string>
 
-// Minimal HTTP client (raw POSIX sockets) posting a JSON body to http://host:port/<path>.
+// Minimal HTTP client (raw POSIX sockets) posting a JSON body to http://host:port/<path>,
+// the path being given per request.
 // One connection per request, same approach as IterationDataHttpSender in antares-xpansion.
 class MicroIterationsHttpSender
 {
 public:
-    MicroIterationsHttpSender(std::string host, int port, std::string path);
+    MicroIterationsHttpSender(std::string host, int port);
     ~MicroIterationsHttpSender();
 
     MicroIterationsHttpSender(const MicroIterationsHttpSender&) = delete;
     MicroIterationsHttpSender& operator=(const MicroIterationsHttpSender&) = delete;
 
-    bool Send(const std::string& json_body);
+    bool Send(const std::string& path, const std::string& json_body);
 
 private:
     bool Connect();
@@ -21,6 +22,5 @@ private:
 
     std::string host_;
     int port_;
-    std::string path_;
     int socket_fd_ = -1;
 };

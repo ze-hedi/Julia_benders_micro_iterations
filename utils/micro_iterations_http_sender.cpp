@@ -10,8 +10,8 @@
 #include <iostream>
 #include <sstream>
 
-MicroIterationsHttpSender::MicroIterationsHttpSender(std::string host, int port, std::string path)
-    : host_(std::move(host)), port_(port), path_(std::move(path))
+MicroIterationsHttpSender::MicroIterationsHttpSender(std::string host, int port)
+    : host_(std::move(host)), port_(port)
 {
 }
 
@@ -58,7 +58,7 @@ void MicroIterationsHttpSender::Disconnect()
     }
 }
 
-bool MicroIterationsHttpSender::Send(const std::string& json_body)
+bool MicroIterationsHttpSender::Send(const std::string& path, const std::string& json_body)
 {
     if (!Connect())
     {
@@ -66,7 +66,7 @@ bool MicroIterationsHttpSender::Send(const std::string& json_body)
     }
 
     std::ostringstream http;
-    http << "POST " << path_ << " HTTP/1.1\r\n"
+    http << "POST " << path << " HTTP/1.1\r\n"
          << "Host: " << host_ << ":" << port_ << "\r\n"
          << "Content-Type: application/json\r\n"
          << "Content-Length: " << json_body.size() << "\r\n"
