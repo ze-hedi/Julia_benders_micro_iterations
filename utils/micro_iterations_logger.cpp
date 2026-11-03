@@ -48,6 +48,7 @@ MicroIterationsLog::MicroIterationsLog(
 
     // Start the background worker thread
     worker_thread_ = std::thread(&MicroIterationsLog::workerLoop, this);
+    // HTTP: second background thread, drains http_queue_ and POSTs to the frontend server
     http_thread_ = std::thread(&MicroIterationsLog::httpWorkerLoop, this);
 }
 
@@ -62,6 +63,7 @@ MicroIterationsLog::~MicroIterationsLog()
         worker_thread_.join();
     }
 
+    // HTTP: stop the sender thread; it drains the remaining queued requests before exiting
     {
         std::lock_guard<std::mutex> lock(http_mutex_);
         http_stop_ = true;
@@ -100,6 +102,7 @@ void MicroIterationsLog::workerLoop()
     }
 }
 
+// HTTP: push a {path, json body} request on http_queue_ (non-blocking for the solver thread)
 void MicroIterationsLog::enqueueHttp(std::string path, std::string body)
 {
     {
@@ -109,6 +112,7 @@ void MicroIterationsLog::enqueueHttp(std::string path, std::string body)
     http_cv_.notify_one();
 }
 
+// HTTP: sender thread body. Pops requests one by one and sends them via MicroIterationsHttpSender
 void MicroIterationsLog::httpWorkerLoop()
 {
     while (true) {
@@ -139,6 +143,7 @@ void MicroIterationsLog::AddMasterIterationLog(int num_iter,
         nlohmann::json payload = {{"num_master_iter", num_iter},
                                   {"elapsed_time", elapsed_time.empty() ? 0.0 : std::stod(elapsed_time)},
                                   {"master_resolution_time", master_resolution_time * 1000.0}};
+        // HTTP: POST /master_times (rank 0 only, durations in ms)
         enqueueHttp("/master_times", payload.dump());
     }
 
@@ -162,6 +167,7 @@ void MicroIterationsLog::AddMicroIterionLog(std::string sub_name,
                               {"nb_added_constraints", added_constraints_keys.size()},
                               {"solving_time", solving_time},
                               {"elapsed_time", elapsed_time}};
+    // HTTP: POST /micro_iter (sent by every rank, identified by "rank")
     enqueueHttp("/micro_iter", payload.dump());
 
     enqueue([this, sub_name = std::move(sub_name), num_micro_iter, num_master_iter,
@@ -190,6 +196,7 @@ void MicroIterationsLog::DumpAddedConstraints(int num_micro_iter,
                               {"num_master_iter", num_master_iter},
                               {"num_micro_iter", num_micro_iter},
                               {"constraints", constraints}};
+    // HTTP: POST /added_constraints (every rank; families added in this micro iteration with is_N flag)
     enqueueHttp("/added_constraints", payload.dump());
 
     enqueue([this, num_micro_iter, num_master_iter,
