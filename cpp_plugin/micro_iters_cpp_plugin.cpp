@@ -228,7 +228,7 @@ extern "C"
         {
             F_N_values[variables_dict.at(variables_names_vector[i])] = sub_solution[variables_indices_vector[i]] ;
         }
-        auto constraints_families = plugin->return_constraints_for_micro_iteration(sub_name, F_N_values);
+        auto constraints_families = plugin->return_constraints_for_micro_iteration(sub_name, F_N_values, added_constraints_families_per_sub[sub_name]);
         auto size_before = added_constraints_families_per_sub[sub_name].size();
         for (const auto& [family_name, is_N] : constraints_families)
         {
