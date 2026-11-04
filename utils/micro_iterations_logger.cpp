@@ -180,7 +180,7 @@ void MicroIterationsLog::AddMicroIterionLog(std::string sub_name,
              solving_time = std::move(solving_time),
              added_constraints_keys = std::move(added_constraints_keys),
              elapsed_time = std::move(elapsed_time)] {
-        log_file_ << sub_name << " ; " << num_master_iter << " ; " << num_micro_iter << " ; " <<added_constraints_keys.size()<< " ; " << solving_time <<" ms"<< " ; " << elapsed_time << " ms\n";
+        log_file_ << sub_name << " ; " << num_master_iter << " ; " << num_micro_iter << " ; " <<added_constraints_keys.size()<< " ; " << solving_time <<" us"<< " ; " << elapsed_time << " ms\n";
     });
 }
 

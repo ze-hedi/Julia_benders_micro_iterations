@@ -702,7 +702,7 @@ class Plugin
             return ;
         }
         json j = json::parse(f) ;
-        max_constraints_per_micro_it_ = j.value("max_constraints_per_micro_it", 1) ;
+        max_constraints_per_micro_it_ = j.value("max_constraints_per_micro_it", std::numeric_limits<int>::max()) ;
         add_N_constraint_first_       = j.value("add_N_constraint", false) ;
         tol_N_                        = j.value("tol_N", 1.001) ;
         tol_N_K_                      = j.value("tol_N_K", 1.0) ;

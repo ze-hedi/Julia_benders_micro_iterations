@@ -14,7 +14,7 @@ MASTER_RE = re.compile(
 class MicroIteration:
     num_micro_iter: int
     nb_added_constraints: int
-    solving_time: float  # ms
+    solving_time: float  # us
     elapsed_time: float  # ms
     # (constraint family name, is_N) added at this micro iteration
     added_constraints: list[tuple[str, bool]] = field(default_factory=list)
@@ -73,7 +73,7 @@ def parse_study(study_path: str) -> BendersLog:
                 MicroIteration(
                     num_micro_iter=int(num_micro),
                     nb_added_constraints=int(nb),
-                    solving_time=float(solving.removesuffix("ms")),
+                    solving_time=float(solving.removesuffix("us")),
                     elapsed_time=float(elapsed.removesuffix("ms")),
                     added_constraints=read_added_constraints(
                         log_file.parent, int(num_master), sub_name, int(num_micro)
