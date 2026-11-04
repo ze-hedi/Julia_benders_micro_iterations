@@ -698,17 +698,23 @@ class Plugin
         std::ifstream f(config_path) ;
         if (!f.is_open()) {
             std::cerr << "[Plugin ERROR] Cannot open config file: " << config_path << ", using default values:" << std::endl ;
-            std::cerr << "  max_constraints_per_micro_it = " << max_constraints_per_micro_it_ << std::endl ;
-            std::cerr << "  add_N_constraint_first       = " << std::boolalpha << add_N_constraint_first_ << std::endl ;
-            std::cerr << "  tol_N                        = " << tol_N_ << std::endl ;
-            std::cerr << "  tol_N_K                      = " << tol_N_K_ << std::endl ;
+            print_config() ;
             return ;
         }
         json j = json::parse(f) ;
-        max_constraints_per_micro_it_ = j.value("max_constraints_per_micro_it", std::numeric_limits<int>::max()) ;
+        max_constraints_per_micro_it_ = j.value("max_constraints_per_micro_it", 1) ;
         add_N_constraint_first_       = j.value("add_N_constraint", false) ;
         tol_N_                        = j.value("tol_N", 1.001) ;
         tol_N_K_                      = j.value("tol_N_K", 1.0) ;
+        std::cerr << "[Plugin] Config loaded from " << config_path << ":" << std::endl ;
+        print_config() ;
+    }
+
+    void print_config() const {
+        std::cerr << "  max_constraints_per_micro_it = " << max_constraints_per_micro_it_ << std::endl ;
+        std::cerr << "  add_N_constraint_first       = " << std::boolalpha << add_N_constraint_first_ << std::endl ;
+        std::cerr << "  tol_N                        = " << tol_N_ << std::endl ;
+        std::cerr << "  tol_N_K                      = " << tol_N_K_ << std::endl ;
     }
 
     mpi::communicator* world_ ;

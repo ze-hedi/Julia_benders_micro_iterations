@@ -17,6 +17,7 @@ MicroIterationsHttpSender::MicroIterationsHttpSender(std::string host, int port)
 
 MicroIterationsHttpSender::~MicroIterationsHttpSender()
 {
+    // make sure no socket is left open when the sender is destroyed
     Disconnect();
 }
 
@@ -35,6 +36,7 @@ bool MicroIterationsHttpSender::Connect()
     if (inet_pton(AF_INET, host_.c_str(), &addr.sin_addr) <= 0)
     {
         std::cerr << "[MicroIterationsHttpSender] invalid address: " << host_ << "\n";
+        // release the socket created above so it does not leak
         Disconnect();
         return false;
     }
@@ -42,6 +44,7 @@ bool MicroIterationsHttpSender::Connect()
     if (connect(socket_fd_, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) < 0)
     {
         std::cerr << "[MicroIterationsHttpSender] connect() failed: " << strerror(errno) << "\n";
+        // release the socket created above so it does not leak
         Disconnect();
         return false;
     }
@@ -60,6 +63,7 @@ void MicroIterationsHttpSender::Disconnect()
 
 bool MicroIterationsHttpSender::Send(const std::string& path, const std::string& json_body)
 {
+    // open a new TCP connection to host_:port_ (one connection per request, see "Connection: close")
     if (!Connect())
     {
         return false;
@@ -76,6 +80,7 @@ bool MicroIterationsHttpSender::Send(const std::string& path, const std::string&
     std::string request = http.str();
 
     ssize_t sent = send(socket_fd_, request.c_str(), request.size(), MSG_NOSIGNAL);
+    // close the socket right after sending, whether or not send() succeeded (no response is read)
     Disconnect();
 
     if (sent < 0)
