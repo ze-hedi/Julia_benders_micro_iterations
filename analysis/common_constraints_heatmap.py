@@ -101,7 +101,7 @@ def main():
     p.add_argument("--unit", choices=["branch", "family"], default="branch")
     p.add_argument("--metric", choices=["jaccard", "row"], default="jaccard")
     a = p.parse_args()
-    out = Path(a.out) if a.out else Path("analysis/figures") / Path(a.study).name / f"common_{a.unit}_{a.metric}"
+    out = Path(a.out) if a.out else Path("results") / Path(a.study).name / f"common_{a.unit}_{a.metric}"
     out.mkdir(parents=True, exist_ok=True)
     per_master = sets_per_master(a.study, a.unit)
     write_csv(out / "overlap.csv", per_master, a.metric)

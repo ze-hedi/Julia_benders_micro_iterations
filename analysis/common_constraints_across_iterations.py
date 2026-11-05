@@ -73,7 +73,7 @@ def main():
     p.add_argument("--unit", choices=["branch", "family"], default="branch")
     p.add_argument("--metric", choices=["jaccard", "row"], default="jaccard")
     a = p.parse_args()
-    out = Path(a.out) if a.out else Path("analysis/figures") / Path(a.study).name / f"across_iterations_{a.unit}_{a.metric}"
+    out = Path(a.out) if a.out else Path("results") / Path(a.study).name / f"across_iterations_{a.unit}_{a.metric}"
     out.mkdir(parents=True, exist_ok=True)
     per_sub = sets_per_sub(a.study, a.unit)
     write_csv(out / "overlap.csv", per_sub, a.metric)

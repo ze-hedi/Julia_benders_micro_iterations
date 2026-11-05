@@ -1,7 +1,7 @@
 """N vs N-K constraint families added per micro iteration, one figure per subproblem.
 
 Usage: python analysis/added_constraints_ratio.py [study_dir] [out_dir]
-  study_dir defaults to 100_constraint, out_dir to analysis/figures/<study_dir name>.
+  study_dir defaults to 100_constraint, out_dir to results/<study_dir name>.
 
 NK counts every N-K family (flag 0: branch_<X>_inc_<Y> and inc_<Y>), N counts the
 branch_<X> families (flag 1): the same unit as the max_constraints budget.
@@ -63,7 +63,7 @@ def plot_sub(sub, rows, ymax, path: Path, plt):
 
 def main():
     study = Path(sys.argv[1] if len(sys.argv) > 1 else "100_constraint")
-    out = Path(sys.argv[2] if len(sys.argv) > 2 else Path("analysis/figures") / study.name)
+    out = Path(sys.argv[2] if len(sys.argv) > 2 else Path("results") / study.name)
     out.mkdir(parents=True, exist_ok=True)
     data = collect(str(study))
     write_csv(data, out / "n_vs_nk.csv")
