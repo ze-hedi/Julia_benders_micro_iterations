@@ -23,4 +23,7 @@ for study in "${studies[@]}"; do
     "$PY" analysis/common_constraints_heatmap.py "$study" "$out/common_between_subproblems"
     "$PY" analysis/common_constraints_across_iterations.py "$study" "$out/common_between_iterations"
 done
+# comparisons across all studies (one run, not per study)
+"$PY" analysis/solve_time_by_max_constraints.py results/max_constraints_comparison/solve_time
+"$PY" analysis/added_constraints_by_max_constraints.py results/max_constraints_comparison/added_constraints
 echo "done: see results/"
