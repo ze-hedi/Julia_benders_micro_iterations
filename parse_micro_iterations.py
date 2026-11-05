@@ -73,7 +73,7 @@ def parse_study(study_path: str) -> BendersLog:
                 MicroIteration(
                     num_micro_iter=int(num_micro),
                     nb_added_constraints=int(nb),
-                    solving_time=float(solving.removesuffix("us")),
+                    solving_time=float(solving.removesuffix("us").removesuffix("ms")),  # older logs wrote ms
                     elapsed_time=float(elapsed.removesuffix("ms")),
                     added_constraints=read_added_constraints(
                         log_file.parent, int(num_master), sub_name, int(num_micro)
