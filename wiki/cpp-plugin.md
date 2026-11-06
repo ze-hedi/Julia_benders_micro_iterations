@@ -73,7 +73,8 @@ void OnBendersMicroIterationEnd(std::string sub_name, std::string solving_time,
                                 std::vector<std::string>& variables_names_vector,
                                 std::filesystem::path input_root,
                                 std::vector<std::string>& constraints_to_add_vec,
-                                int num_master_iter, int num_micro_iter)
+                                int num_master_iter, int num_micro_iter,
+                                int n_saturated_constraints, int n_all_constraints)
 ```
 
 Steps:
