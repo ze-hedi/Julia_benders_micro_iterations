@@ -191,6 +191,9 @@ extern "C"
     }
 
     void OnBendersEnd(){
+        if (micro_iterations_logger) {
+            micro_iterations_logger->NotifyEnd();
+        }
     }
      
 
@@ -199,8 +202,9 @@ extern "C"
         clean_added_constraints_families_per_sub(); 
     }
 
-    void OnBendersIterationEnd(){
-    } 
+    void OnBendersIterationEnd(int n_cuts_added){
+        micro_iterations_logger->AddCutsLog(n_cuts_added);
+    }
 
     void OnBendersMicroIterationStart()
     {
@@ -214,7 +218,10 @@ extern "C"
                                 std::filesystem::path input_root,
                                 std::vector<std::string>& constraints_to_add_vec,
                                 int num_master_iter,
-                                int num_micro_iter)
+                                int num_micro_iter,
+                                int n_saturated_constraints,
+                                int n_all_constraints,
+                                std::vector<std::string>& saturated_constraints_names)
     {
         auto chrono_start = std::chrono::steady_clock::now();
 
@@ -228,7 +235,7 @@ extern "C"
         {
             F_N_values[variables_dict.at(variables_names_vector[i])] = sub_solution[variables_indices_vector[i]] ;
         }
-        auto constraints_families = plugin->return_constraints_for_micro_iteration(sub_name, F_N_values, added_constraints_families_per_sub[sub_name]);
+        auto constraints_families = plugin->return_constraints_for_micro_iteration(sub_name, F_N_values);
         auto size_before = added_constraints_families_per_sub[sub_name].size();
         for (const auto& [family_name, is_N] : constraints_families)
         {
@@ -246,8 +253,29 @@ extern "C"
         std::string elapsed_time = std::to_string(elapsed_ms);
 
         
-        micro_iterations_logger->DumpAddedConstraints(num_micro_iter, num_master_iter, sub_name, added_constraints_families_per_sub[sub_name],added_constraints_families_per_sub_is_N[sub_name], size_before, size_after);
-        micro_iterations_logger->AddMicroIterionLog(sub_name, num_micro_iter, num_master_iter, solving_time, constraints_to_add_vec, elapsed_time);
+        // branches (families) added in this micro iteration, split N / N-1
+        int n_added_branches_N = 0;
+        int n_added_branches_NK = 0;
+        // individual constraints behind those families, split N / N-1
+        int n_added_constraints_N = 0;
+        int n_added_constraints_NK = 0;
+        // individual constraints behind the inc_<incident> families
+        int n_added_constraints_inc = 0;
+        const auto& is_N_vec = added_constraints_families_per_sub_is_N[sub_name];
+        const auto& families_vec = added_constraints_families_per_sub[sub_name];
+        for (auto i = size_before; i < size_after; ++i)
+        {
+            int n_constraints = static_cast<int>(constraints_dict[families_vec[i]].size());
+            if (is_N_vec[i]) { ++n_added_branches_N; n_added_constraints_N += n_constraints; }
+            else { ++n_added_branches_NK; n_added_constraints_NK += n_constraints; }
+            if (families_vec[i].rfind("inc_", 0) == 0) n_added_constraints_inc += n_constraints;
+        }
+
+        std::cout << sub_name << " master " << num_master_iter << " micro " << num_micro_iter
+                  << " : n_added_constraints_inc = " << n_added_constraints_inc << std::endl;
+
+        micro_iterations_logger->DumpAddedConstraints(num_micro_iter, num_master_iter, sub_name, added_constraints_families_per_sub[sub_name],added_constraints_families_per_sub_is_N[sub_name], size_before, size_after, saturated_constraints_names);
+        micro_iterations_logger->AddMicroIterionLog(sub_name, num_micro_iter, num_master_iter, solving_time, constraints_to_add_vec, elapsed_time, n_saturated_constraints, n_all_constraints, n_added_branches_N, n_added_branches_NK, n_added_constraints_N, n_added_constraints_NK);
 
     }
 

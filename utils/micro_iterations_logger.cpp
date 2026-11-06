@@ -49,8 +49,7 @@ MicroIterationsLog::MicroIterationsLog(
     // Start the background worker thread
     worker_thread_ = std::thread(&MicroIterationsLog::workerLoop, this);
     // HTTP: second background thread, drains http_queue_ and POSTs to the frontend server
-    // (disabled for now)
-    // http_thread_ = std::thread(&MicroIterationsLog::httpWorkerLoop, this);
+    http_thread_ = std::thread(&MicroIterationsLog::httpWorkerLoop, this);
 }
 
 MicroIterationsLog::~MicroIterationsLog()
@@ -113,6 +112,11 @@ void MicroIterationsLog::enqueueHttp(std::string path, std::string body)
     http_cv_.notify_one();
 }
 
+void MicroIterationsLog::NotifyEnd()
+{
+    enqueueHttp("/end", "{}");
+}
+
 // HTTP: sender thread body. Pops requests one by one and sends them via MicroIterationsHttpSender
 void MicroIterationsLog::httpWorkerLoop()
 {
@@ -141,16 +145,16 @@ void MicroIterationsLog::AddMasterIterationLog(int num_iter,
                                                double master_resolution_time,
                                                std::string elapsed_time)
 {
-    // HTTP (disabled for now): every rank calls this with the same broadcast values: only rank 0
+    // HTTP: every rank calls this with the same broadcast values: only rank 0
     // notifies the frontend
-    // if (_world->rank() == 0)
-    // {
-    //     nlohmann::json payload = {{"num_master_iter", num_iter},
-    //                               {"elapsed_time", elapsed_time.empty() ? 0.0 : std::stod(elapsed_time)},
-    //                               {"master_resolution_time", master_resolution_time * 1000.0}};
-    //     // HTTP: POST /master_times (rank 0 only, durations in ms)
-    //     enqueueHttp("/master_times", payload.dump());
-    // }
+    if (_world->rank() == 0)
+    {
+        nlohmann::json payload = {{"num_master_iter", num_iter},
+                                  {"elapsed_time", elapsed_time.empty() ? 0.0 : std::stod(elapsed_time)},
+                                  {"master_resolution_time", master_resolution_time * 1000.0}};
+        // HTTP: POST /master_times (rank 0 only, durations in ms)
+        enqueueHttp("/master_times", payload.dump());
+    }
 
     enqueue([this, num_iter, master_resolution_time, elapsed_time = std::move(elapsed_time)] {
         log_file_ << "master iteration " << num_iter << " elapsed time : " << elapsed_time << " ms"
@@ -158,29 +162,54 @@ void MicroIterationsLog::AddMasterIterationLog(int num_iter,
     });
 }
 
+void MicroIterationsLog::AddCutsLog(int n_cuts_added)
+{
+    // HTTP: every rank calls this with the same value: only rank 0 notifies the frontend
+    if (_world->rank() == 0)
+    {
+        nlohmann::json payload = {{"n_cuts_added", n_cuts_added}};
+        // HTTP: POST /added_cuts (rank 0 only)
+        enqueueHttp("/added_cuts", payload.dump());
+    }
+}
+
 void MicroIterationsLog::AddMicroIterionLog(std::string sub_name,
                                             int num_micro_iter,
                                             int num_master_iter,
                                             std::string solving_time,
                                             std::vector<std::string> added_constraints_keys,
-                                            std::string elapsed_time)
+                                            std::string elapsed_time,
+                                            int n_saturated_constraints,
+                                            int n_all_constraints,
+                                            int n_added_branches_N,
+                                            int n_added_branches_NK,
+                                            int n_added_constraints_N,
+                                            int n_added_constraints_NK)
 {
-    // HTTP (disabled for now)
-    // nlohmann::json payload = {{"rank", _world->rank()},
-    //                           {"sub_name", sub_name},
-    //                           {"num_master_iter", num_master_iter},
-    //                           {"num_micro_iter", num_micro_iter},
-    //                           {"nb_added_constraints", added_constraints_keys.size()},
-    //                           {"solving_time", solving_time},
-    //                           {"elapsed_time", elapsed_time}};
-    // // HTTP: POST /micro_iter (sent by every rank, identified by "rank")
-    // enqueueHttp("/micro_iter", payload.dump());
+    // HTTP
+    nlohmann::json payload = {{"rank", _world->rank()},
+                              {"sub_name", sub_name},
+                              {"num_master_iter", num_master_iter},
+                              {"num_micro_iter", num_micro_iter},
+                              {"nb_added_constraints", added_constraints_keys.size()},
+                              {"solving_time", solving_time},
+                              {"elapsed_time", elapsed_time},
+                              {"n_saturated_constraints", n_saturated_constraints},
+                              {"n_all_constraints", n_all_constraints},
+                              {"n_added_branches_N", n_added_branches_N},
+                              {"n_added_branches_NK", n_added_branches_NK},
+                              {"n_added_constraints_N", n_added_constraints_N},
+                              {"n_added_constraints_NK", n_added_constraints_NK}};
+    // HTTP: POST /micro_iter (sent by every rank, identified by "rank")
+    enqueueHttp("/micro_iter", payload.dump());
 
     enqueue([this, sub_name = std::move(sub_name), num_micro_iter, num_master_iter,
              solving_time = std::move(solving_time),
              added_constraints_keys = std::move(added_constraints_keys),
-             elapsed_time = std::move(elapsed_time)] {
-        log_file_ << sub_name << " ; " << num_master_iter << " ; " << num_micro_iter << " ; " <<added_constraints_keys.size()<< " ; " << solving_time <<" us"<< " ; " << elapsed_time << " ms\n";
+             elapsed_time = std::move(elapsed_time),
+             n_saturated_constraints, n_all_constraints] {
+        log_file_ << sub_name << " ; " << num_master_iter << " ; " << num_micro_iter << " ; " <<added_constraints_keys.size()<< " ; " << solving_time <<" us"<< " ; " << elapsed_time << " ms"
+                  << " ; " << n_saturated_constraints << " ; " << n_all_constraints << "\n";
     });
 }
 
@@ -190,21 +219,28 @@ void MicroIterationsLog::DumpAddedConstraints(int num_micro_iter,
                                                const std::vector<std::string>& constraints_to_add,
                                                const std::vector<bool>& constraints_to_add_is_N,
                                                size_t start,
-                                               size_t end)
+                                               size_t end,
+                                               const std::vector<std::string>& active_constraints)
 {
-    // HTTP (disabled for now)
-    // nlohmann::json constraints = nlohmann::json::array();
-    // for (size_t i = start; i < end; ++i) {
-    //     constraints.push_back({{"name", constraints_to_add[i]},
-    //                            {"is_N", static_cast<bool>(constraints_to_add_is_N[i])}});
-    // }
-    // nlohmann::json payload = {{"rank", _world->rank()},
-    //                           {"sub_name", sub_name},
-    //                           {"num_master_iter", num_master_iter},
-    //                           {"num_micro_iter", num_micro_iter},
-    //                           {"constraints", constraints}};
-    // // HTTP: POST /added_constraints (every rank; families added in this micro iteration with is_N flag)
-    // enqueueHttp("/added_constraints", payload.dump());
+    // HTTP
+    nlohmann::json constraints = nlohmann::json::array();
+    for (size_t i = start; i < end; ++i) {
+        // families are branch_<monitored>, branch_<monitored>_inc_<incident> or inc_<incident>:
+        // only the last one starts with "inc_"
+        const bool is_inc = constraints_to_add[i].rfind("inc_", 0) == 0;
+        constraints.push_back({{"name", constraints_to_add[i]},
+                               {"is_N", static_cast<bool>(constraints_to_add_is_N[i])},
+                               {"is_inc", is_inc}});
+    }
+    nlohmann::json payload = {{"rank", _world->rank()},
+                              {"sub_name", sub_name},
+                              {"num_master_iter", num_master_iter},
+                              {"num_micro_iter", num_micro_iter},
+                              {"constraints", constraints},
+                              {"active_constraints", active_constraints}};
+    // HTTP: POST /added_constraints (every rank; families added in this micro iteration with is_N flag,
+    // plus the names of the active (saturated) constraints)
+    enqueueHttp("/added_constraints", payload.dump());
 
     enqueue([this, num_micro_iter, num_master_iter,
              sub_name = std::move(sub_name),

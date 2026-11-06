@@ -75,6 +75,14 @@ public:
                                std::string elapsed_time = "");
 
     /*
+        Called in the benders iteration end callback.
+        Sends the number of cuts added during the iteration over HTTP only (POST /added_cuts).
+        @input
+            - n_cuts_added : number of cuts added to the master during the iteration
+    */
+    void AddCutsLog(int n_cuts_added);
+
+    /*
         Called in the micro iteration end callback.
         It will set the output data we want to dump for micro iterations for each subproblem and
         at each master iteration.
@@ -83,13 +91,25 @@ public:
             - solving_name : time to solve subproblem
             - adding_rows_time : elapsed time to add constraints
             - added_constraints_keys : keys of added constraints
+            - n_saturated_constraints : number of saturated constraints
+            - n_all_constraints : total number of constraints
+            - n_added_branches_N : branches added in N at this micro iteration (HTTP only)
+            - n_added_branches_NK : branches added in N-1 at this micro iteration (HTTP only)
+            - n_added_constraints_N : individual constraints behind the N branches (HTTP only)
+            - n_added_constraints_NK : individual constraints behind the N-1 branches (HTTP only)
     */
     void AddMicroIterionLog(std::string sub_name,
                             int num_micro_iter,
                             int num_master_iter,
                             std::string solving_time,
                             std::vector<std::string> added_constraints_keys,
-                            std::string elapsed_time);
+                            std::string elapsed_time,
+                            int n_saturated_constraints,
+                            int n_all_constraints,
+                            int n_added_branches_N,
+                            int n_added_branches_NK,
+                            int n_added_constraints_N,
+                            int n_added_constraints_NK);
 
     void AddMicroIterCount(std::string sub_name, int num_micro_iter);
 
@@ -99,7 +119,11 @@ public:
                               const std::vector<std::string>& constraints_to_add,
                               const std::vector<bool>& constraints_to_add_is_N,
                               size_t start,
-                              size_t end);
+                              size_t end,
+                              const std::vector<std::string>& active_constraints = {});
+
+    // HTTP: tell the server the Benders run is over (POST /end)
+    void NotifyEnd();
 
     ~MicroIterationsLog();
 
@@ -127,7 +151,7 @@ private:
     std::queue<std::function<void()>> task_queue_;
     bool stop_ = false;
 
-    // async http sending (POST /micro_iter, /master_times and /added_constraints on localhost:3123), own thread so a
+    // async http sending (POST /micro_iter, /master_times, /added_constraints and /added_cuts on localhost:3123), own thread so a
     // slow or absent server never delays file logging. Queue items are {path, body}.
     MicroIterationsHttpSender http_sender_{"127.0.0.1", 3123};
     std::thread http_thread_;

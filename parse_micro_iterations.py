@@ -66,9 +66,9 @@ def parse_study(study_path: str) -> BendersLog:
                     it.master_resolution_time = float(m.group(3))
                 continue
             parts = [p.strip() for p in line.split(";")]
-            if len(parts) != 6:  # header, blank lines
+            if len(parts) not in (6, 8):  # header, blank lines; 8 cols = newer logs with saturation counts
                 continue
-            sub_name, num_master, num_micro, nb, solving, elapsed = parts
+            sub_name, num_master, num_micro, nb, solving, elapsed = parts[:6]
             get(int(num_master)).micro_iterations.setdefault(sub_name, []).append(
                 MicroIteration(
                     num_micro_iter=int(num_micro),

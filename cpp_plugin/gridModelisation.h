@@ -591,20 +591,14 @@ class Plugin
     //max_constraints_per_micro_it to set in micro_iteration_config
     //add_N_constraint_first to set in micro
     // Returns pairs of (family_name, is_N) where is_N=true means N constraint, false means N-K
-    // max_constraints_per_micro_it_ limits the number of NEW constraint families (families already in
-    // already_added are not counted). An N-K overflow costs up to 2 families (branch_X_inc_Y and inc_Y);
-    // it is added only if the whole group fits in the remaining budget.
     std::vector<std::pair<std::string, bool>>
     sort_results_and_return_constraints(
         const std::map<std::string, double>& dict_results_overflow_N,
-        const std::map<std::pair<std::string,std::string>, double>& dict_results_overflow_N_K,
-        const std::vector<std::string>& already_added = {})
+        const std::map<std::pair<std::string,std::string>, double>& dict_results_overflow_N_K)
     {
         std::vector<std::pair<std::string, bool>> constraints_to_add ;
         std::vector<std::string> N_constraints_micro_it ;
         std::vector<std::string> N_K_constraints_micro_it ;
-        std::set<std::string> known_families(already_added.begin(), already_added.end()) ;
-        int n_new_families = 0 ;
 
         // Sort N-K overflows by value descending
         std::vector<std::pair<std::pair<std::string,std::string>, double>> sorted_results_overflow_N_K(
@@ -621,46 +615,30 @@ class Plugin
                 
         // Add N constraints
         for (const auto& [monitored, val] : sorted_results_overlow_N) {
-            const std::string family = "branch_" + monitored ;
-            const bool is_new = known_families.count(family) == 0 ;
-            if (is_new && n_new_families + 1 > max_constraints_per_micro_it_)
+            if ((int)(N_constraints_micro_it.size() + N_K_constraints_micro_it.size()) >= max_constraints_per_micro_it_)
                 break ;
-            constraints_to_add.push_back({family, true}) ;
+            constraints_to_add.push_back({"branch_" + monitored, true}) ;
             N_constraints_micro_it.push_back(monitored) ;
-            if (is_new) {
-                known_families.insert(family) ;
-                ++n_new_families ;
-            }
         }
 
         // Add N-K constraints
         for (const auto& [key, val] : sorted_results_overflow_N_K) {
+            if ((int)(N_constraints_micro_it.size() + N_K_constraints_micro_it.size()) >= max_constraints_per_micro_it_)
+                break ;
             const auto& monitored = key.first ;
             const auto& incident = key.second ;
 
             bool already_in_N_K = std::find(N_K_constraints_micro_it.begin(), N_K_constraints_micro_it.end(), monitored)
                                     != N_K_constraints_micro_it.end() ;
-            if (already_in_N_K)
-                continue ;
-            bool in_N = std::find(N_constraints_micro_it.begin(), N_constraints_micro_it.end(), monitored)
-                            != N_constraints_micro_it.end() ;
-            if (add_N_constraint_first_ && in_N)
-                continue ;
-
-            const std::string branch_family = "branch_" + monitored + "_inc_" + incident ;
-            const std::string inc_family = "inc_" + incident ;
-            const int cost = (known_families.count(branch_family) == 0 ? 1 : 0)
-                           + (known_families.count(inc_family) == 0 ? 1 : 0) ;
-            // Stop (not skip) so a lower-priority overflow never takes the place of a worse one
-            if (n_new_families + cost > max_constraints_per_micro_it_)
-                break ;
-
-            constraints_to_add.push_back({branch_family, false}) ;
-            constraints_to_add.push_back({inc_family, false}) ;
-            N_K_constraints_micro_it.push_back(monitored) ;
-            known_families.insert(branch_family) ;
-            known_families.insert(inc_family) ;
-            n_new_families += cost ;
+            if (!already_in_N_K) {
+                bool in_N = std::find(N_constraints_micro_it.begin(), N_constraints_micro_it.end(), monitored)
+                                != N_constraints_micro_it.end() ;
+                if (!(add_N_constraint_first_ && in_N)) {
+                    constraints_to_add.push_back({"branch_" + monitored + "_inc_" + incident, false}) ;
+                    constraints_to_add.push_back({"inc_" + incident, false}) ;
+                    N_K_constraints_micro_it.push_back(monitored) ;
+                }
+            }
         }
         return constraints_to_add ;
     }
@@ -669,12 +647,10 @@ class Plugin
     //tol_N to set in micro config
     //tol_N_K to set in micro config
     // Returns pairs of (family_name, is_N) where is_N=true means N constraint, false means N-K
-    // already_added: families already injected in this sub, they do not count against the limit
     std::vector<std::pair<std::string, bool>>
     return_constraints_for_micro_iteration(
         const std::string& sub_problem ,
-        const std::map<std::string, double>& F_N_values,
-        const std::vector<std::string>& already_added = {})
+        const std::map<std::string, double>& F_N_values)
     {
         auto dict_results_overflow_N = get_overflows_N(max_flows_N_, all_monitored_branches_, sub_problem, F_N_values, tol_N_) ;
 
@@ -682,7 +658,7 @@ class Plugin
             dict_incident_outage_AC_branches_, dict_incident_HVDC_branches_,
             dict_incident_factors_, HVDC_new_dict_, sub_problem, F_N_values, tol_N_K_) ;
 
-        auto result = sort_results_and_return_constraints(dict_results_overflow_N, dict_results_overflow_N_K, already_added) ;
+        auto result = sort_results_and_return_constraints(dict_results_overflow_N, dict_results_overflow_N_K) ;
         return result ;
     }
 

@@ -17,14 +17,14 @@ Constructed in `OnBendersStart` with `(output_root, warm_start, world, log_level
 - on rank 0, creates (or clears and recreates) `output_root_/added_constraints/`;
 - starts the file worker thread.
 
-The HTTP worker thread is defined but **disabled**: the line that starts `http_thread_` is commented out, so no HTTP requests are sent in the current build.
+The HTTP worker thread is started here too, so the logging methods also POST to the frontend server (`127.0.0.1:3123`).
 
 ### Methods
 
 | Method | Writes |
 |---|---|
 | `AddMasterIterationLog` | `master iteration <n> elapsed time : <ms> ms ; master resolution time : <s> s` |
-| `AddMicroIterionLog` | `<sub> ; <master> ; <micro> ; <nb_added> ; <solving_time> us ; <elapsed> ms` |
+| `AddMicroIterionLog` | `<sub> ; <master> ; <micro> ; <nb_added> ; <solving_time> us ; <elapsed> ms ; <n_saturated_constraints> ; <n_all_constraints>` |
 | `AddMicroIterCount` | `<sub> ; <micro>` |
 | `DumpAddedConstraints` | `added_constraints/master_<m>/<sub>/micro_iter_<j>.txt`, lines `<name> <0|1>` |
 
@@ -34,7 +34,7 @@ The HTTP worker thread is defined but **disabled**: the line that starts `http_t
 
 `enqueue` pushes a task onto `task_queue_` and notifies a condition variable. `workerLoop` waits for tasks, pops one, and runs it. On destruction the logger sets `stop_`, notifies, and joins the worker, which first drains any remaining queued tasks. The class is non-copyable and non-movable because it owns the thread.
 
-The HTTP side mirrors this with a second queue (`http_queue_`) and thread (`httpWorkerLoop`), but since `http_thread_` is never started, `enqueueHttp` is never called at runtime.
+The HTTP side mirrors this with a second queue (`http_queue_`) and thread (`httpWorkerLoop`), and `enqueueHttp` is called from `AddMasterIterationLog` (rank 0 only, `/master_times`), `AddMicroIterionLog` (`/micro_iter`) and `DumpAddedConstraints` (`/added_constraints`).
 
 ## `MicroIterationsHttpSender`
 

@@ -114,8 +114,8 @@ TEST_F(MicroIterationsLogTest, AddMicroIterationLog)
 {
     {
         MicroIterationsLog logger(tmp_dir, false, g_world, 0);
-        logger.AddMicroIterionLog("area1.mps", 0, 1, "10.5", {"key1", "key2"}, "42");
-        logger.AddMicroIterionLog("area2.mps", 1, 1, "20.3", {}, "15");
+        logger.AddMicroIterionLog("area1.mps", 0, 1, "10.5", {"key1", "key2"}, "42", 3, 10, 1, 1, 4, 6);
+        logger.AddMicroIterionLog("area2.mps", 1, 1, "20.3", {}, "15", 0, 8, 0, 0, 0, 0);
     }
 
     std::string expected_log = "micro_iterations_proc_" + std::to_string(g_world->rank()) + ".log";
